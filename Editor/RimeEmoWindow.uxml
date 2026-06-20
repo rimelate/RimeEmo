@@ -1,0 +1,55 @@
+﻿<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="True">
+  <ui:VisualElement name="root" class="rimeemo-root">
+    <ui:ScrollView name="mainScroll" class="main-scroll">
+      <ui:Label text="RimeEmo" class="title" />
+
+      <ui:VisualElement class="section">
+        <ui:Label text="アバター" class="section-title" />
+        <ui:VisualElement name="avatarFieldContainer" />
+        <ui:Button name="useSelectionButton" text="選択中から取得" />
+      </ui:VisualElement>
+
+      <ui:VisualElement name="messagesContainer" class="messages" />
+
+      <ui:VisualElement class="section">
+        <ui:Label text="解析" class="section-title" />
+        <ui:Button name="analyzeButton" text="アバターの表情を探す" />
+        <ui:Label name="controllerSummaryLabel" text="未解析" class="muted" />
+        <ui:VisualElement name="analysisWarningsContainer" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="section">
+        <ui:Label text="表情の変わり方" class="section-title" />
+        <ui:Label name="slotSummaryLabel" text="まだ解析していません" class="muted" />
+        <ui:ListView name="slotList" class="slot-list" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="section">
+        <ui:Label text="デフォルト顔" class="section-title" />
+        <ui:VisualElement name="rendererDropdownContainer" />
+        <ui:Label name="rendererSummaryLabel" text="顔メッシュ未選択" class="muted" />
+        <ui:Button name="snapshotButton" text="今の顔をデフォルトとして保存" />
+        <ui:Label name="snapshotSummaryLabel" text="デフォルト顔はまだ保存されていません" class="muted" />
+        <ui:ListView name="snapshotList" class="snapshot-list" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="section">
+        <ui:Label text="作成" class="section-title" />
+        <ui:Button name="generateButton" text="表情にデフォルト顔を反映してアバターに設定" />
+        <ui:Label name="generateHintLabel" text="アバター、表情の変わり方、デフォルト顔が揃うと作成できます。" class="muted" />
+      </ui:VisualElement>
+
+      <ui:VisualElement class="section">
+        <ui:Label text="処理結果" class="section-title" />
+        <ui:Label name="logSummaryLabel" text="まだ作成していません。" class="muted" />
+        <ui:ListView name="logList" class="log-list" />
+      </ui:VisualElement>
+    </ui:ScrollView>
+  </ui:VisualElement>
+</ui:UXML>
+
+
+
+
+
+
