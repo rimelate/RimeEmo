@@ -1,0 +1,61 @@
+name: Publish VPM release
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing published release tag (for example v0.1.0)"
+        required: true
+        type: string
+permissions:
+  contents: write
+concurrency:
+  group: rimeemo-vpm-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          persist-credentials: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate release and build audited package
+        run: |
+          gh release view "$RELEASE_TAG" --json isDraft,isPrerelease,tagName > "$RUNNER_TEMP/release.json"
+          python -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/release.json")); assert not r["isDraft"]; assert r["isPrerelease"] == ("-" in r["tagName"]), "Prerelease flag must match tag"'
+          python -m unittest discover -s Scripts~ -p 'test_*.py'
+          python Scripts~/release.py build --tag "$RELEASE_TAG" --output "$RUNNER_TEMP/package"
+      - name: Attach VPM package
+        run: gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/package/"* --clobber
+      - name: Generate listing and stable update notification
+        run: python Scripts~/release.py listing --output "$RUNNER_TEMP/listing"
+      - name: Publish VPM branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin vpm; then
+            git fetch origin vpm
+            git worktree add "$RUNNER_TEMP/vpm" -B vpm FETCH_HEAD
+          else
+            git worktree add --detach "$RUNNER_TEMP/vpm"
+            git -C "$RUNNER_TEMP/vpm" checkout --orphan vpm
+            git -C "$RUNNER_TEMP/vpm" rm -rf .
+          fi
+          cp "$RUNNER_TEMP/listing/index.json" "$RUNNER_TEMP/vpm/index.json"
+          cp "$RUNNER_TEMP/listing/latest.json" "$RUNNER_TEMP/vpm/latest.json"
+          cp "$RUNNER_TEMP/listing/index.html" "$RUNNER_TEMP/vpm/index.html"
+          cp "$RUNNER_TEMP/listing/.nojekyll" "$RUNNER_TEMP/vpm/.nojekyll"
+          git -C "$RUNNER_TEMP/vpm" add index.json latest.json index.html .nojekyll
+          if ! git -C "$RUNNER_TEMP/vpm" diff --cached --quiet; then
+            git -C "$RUNNER_TEMP/vpm" commit -m "Update RimeEmo VPM listing"
+            git -C "$RUNNER_TEMP/vpm" push origin HEAD:refs/heads/vpm
+          fi

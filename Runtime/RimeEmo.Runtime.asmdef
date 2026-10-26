@@ -1,0 +1,6 @@
+{
+  "name": "RimeEmo.Runtime",
+  "rootNamespace": "RimeEmo",
+  "references": [],
+  "autoReferenced": true
+}

@@ -1,0 +1,6 @@
+/* Loaded last. Put your custom visual design here.
+   Example — change the brand colour (Material 3 colour roles):
+   .re-app { --md-primary: rgb(208, 188, 255); --md-on-primary: rgb(56, 30, 114); }
+   .re-button--filled { -unity-font-style: bold; }
+   UXML names identify actions; USS classes describe appearance.
+*/

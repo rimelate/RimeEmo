@@ -1,0 +1,543 @@
+/*
+ * RimeEmo visual system — Material Design 3 (dark), Google Material 3 colour roles.
+ * https://m3.material.io/  ·  Icons: Material Symbols Rounded (Apache License 2.0)
+ *
+ * Structure: top app bar → navigation rail → one page. Surfaces are tonal (no shadows in USS),
+ * buttons come in four emphasis levels: filled > tonal > text > icon.
+ * RimeEmoCustom.uss is loaded after this file and remains the override layer.
+ */
+.re-app {
+ /* Colour roles */
+ --md-surface: rgb(19, 19, 20);
+ --md-surface-container-low: rgb(27, 27, 27);
+ --md-surface-container: rgb(30, 31, 32);
+ --md-surface-container-high: rgb(40, 42, 44);
+ --md-surface-container-highest: rgb(51, 53, 55);
+ --md-on-surface: rgb(227, 227, 227);
+ --md-on-surface-variant: rgb(196, 199, 197);
+ --md-outline: rgb(142, 145, 143);
+ --md-outline-variant: rgb(68, 71, 70);
+ --md-primary: rgb(168, 199, 250);
+ --md-primary-hover: rgb(188, 212, 251);
+ --md-primary-pressed: rgb(146, 183, 247);
+ --md-on-primary: rgb(6, 46, 111);
+ --md-primary-container: rgb(8, 66, 160);
+ --md-on-primary-container: rgb(211, 227, 253);
+ --md-secondary-container: rgb(0, 74, 119);
+ --md-secondary-container-hover: rgb(12, 88, 136);
+ --md-on-secondary-container: rgb(194, 231, 255);
+ --md-tertiary-container: rgb(15, 82, 35);
+ --md-on-tertiary-container: rgb(196, 238, 208);
+ --md-state-hover: rgba(227, 227, 227, 0.08);
+ --md-state-pressed: rgba(227, 227, 227, 0.12);
+ --md-primary-hover-layer: rgba(168, 199, 250, 0.08);
+ /* Shape */
+ --md-shape-xs: 4px;
+ --md-shape-s: 8px;
+ --md-shape-m: 12px;
+ --md-shape-l: 16px;
+ --md-shape-full: 16px;
+ flex-grow: 1;
+ background-color: var(--md-surface);
+ color: var(--md-on-surface);
+ font-size: 12px;
+}
+
+/* ---------- Layout ---------- */
+.re-grow { flex-grow: 1; min-width: 0; }
+.re-row, .re-toolbar {
+ flex-direction: row;
+ align-items: center;
+ flex-shrink: 0;
+ min-height: 36px;
+}
+.re-row > .re-grow, .re-toolbar > .re-grow { flex-basis: 0; flex-shrink: 1; }
+/* Unity base fields default to flex-shrink 0: a growing field then keeps its full width and pushes the buttons after it out of the row. */
+.re-row > .unity-base-field, .re-toolbar > .unity-base-field { flex-shrink: 1; min-width: 0; }
+.re-wrap { flex-wrap: wrap; }
+
+.re-top-bar {
+ flex-direction: row;
+ align-items: center;
+ flex-shrink: 0;
+ height: 52px;
+ padding-left: 12px;
+ padding-right: 8px;
+}
+.re-brand {
+ -unity-font-style: bold;
+ font-size: 18px;
+ color: var(--md-on-surface);
+ margin-right: 20px;
+ min-width: 80px;
+}
+/* The avatar field gives way first, so the buttons and the language menu stay inside the 1000px minimum. */
+.re-top-avatar { max-width: 460px; flex-basis: 0; flex-grow: 4; flex-shrink: 1; min-width: 150px; }
+/* Takes what the avatar field leaves past its 460px, so help and language sit at the right edge of a wide window. */
+.re-top-spacer { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; }
+.re-top-avatar > .unity-base-field__label { min-width: 52px; width: 52px; }
+.re-top-bar > .re-button { flex-shrink: 0; }
+.re-language { width: 210px; flex-shrink: 0; margin-left: 4px; }
+.re-language > .unity-base-field__label { min-width: 96px; }
+/* Top-bar Apply: filled when the avatar is behind, tonal before the first apply, a quiet status once applied. */
+.re-top-apply { flex-shrink: 0; }
+.re-top-apply.re-apply--done { background-color: transparent; color: var(--md-on-surface-variant); }
+.re-top-apply.re-apply--done:disabled { opacity: 1; }
+
+.re-body { flex-direction: row; flex-grow: 1; min-height: 0; }
+.re-main { flex-grow: 1; min-width: 0; padding-right: 8px; padding-bottom: 8px; }
+.re-page { flex-grow: 1; min-height: 0; }
+#settings-page > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: 8px; }
+
+/* Shrinks first when the auto-split sheet opens, so the timeline controls stay inside 760px. */
+.re-workspace { flex-direction: row; flex-grow: 1; flex-basis: 0; min-height: 150px; }
+.re-bottom { flex-shrink: 0; }
+
+/* ---------- Navigation rail ---------- */
+.re-rail {
+ width: 80px;
+ flex-shrink: 0;
+ align-items: center;
+ padding-top: 4px;
+ padding-bottom: 12px;
+}
+.re-rail-item {
+ width: 72px;
+ height: 60px;
+ margin: 0 0 8px 0;
+ padding: 36px 0 2px 0;
+ border-width: 0;
+ border-radius: 0;
+ background-color: transparent;
+ color: var(--md-on-surface-variant);
+ font-size: 11px;
+ -unity-text-align: lower-center;
+ white-space: nowrap;
+ overflow: visible;
+}
+.re-rail-item .re-action-icon {
+ position: absolute;
+ top: 2px;
+ left: 8px;
+ right: 8px;
+ width: auto;
+ height: 32px;
+ border-radius: var(--md-shape-full);
+ font-size: 22px;
+ color: var(--md-on-surface-variant);
+}
+.re-rail-item:hover { background-color: transparent; color: var(--md-on-surface); }
+.re-rail-item:hover .re-action-icon { background-color: var(--md-state-hover); color: var(--md-on-surface); }
+.re-rail-item.is-active { color: var(--md-on-surface); -unity-font-style: bold; }
+.re-rail-item.is-active .re-action-icon { background-color: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.re-rail-item:disabled { opacity: 0.38; }
+
+.re-rail-item:active, .re-rail-item:hover:active, .re-rail-item:focus { background-color: transparent; border-width: 0; }
+.re-rail-item:hover:active .re-action-icon { background-color: var(--md-state-pressed); }
+/* Small badge (Material 3): the avatar has not received the latest edits yet. */
+.re-rail-badge {
+ display: none;
+ position: absolute;
+ top: 3px;
+ right: 16px;
+ width: 8px;
+ height: 8px;
+ border-radius: 4px;
+ background-color: rgb(242, 184, 181);
+}
+
+/* ---------- Surfaces ---------- */
+.re-card, .re-panel {
+ background-color: var(--md-surface-container);
+ border-radius: var(--md-shape-l);
+ padding: 10px 12px;
+ margin: 4px;
+}
+.re-title, .re-heading {
+ -unity-font-style: bold;
+ font-size: 13px;
+ color: var(--md-on-surface);
+ margin: 4px 4px 6px 4px;
+}
+.re-subtitle { font-size: 11px; color: var(--md-on-surface-variant); margin: 4px 4px 2px 4px; }
+.re-hint { font-size: 11px; color: var(--md-on-surface-variant); margin: 4px; white-space: normal; flex-shrink: 0; }
+.re-banner {
+ flex-shrink: 0;
+ white-space: normal;
+ margin: 2px 4px 4px 4px;
+ padding: 6px 12px;
+ border-radius: var(--md-shape-m);
+ background-color: var(--md-secondary-container);
+ color: var(--md-on-secondary-container);
+}
+.re-error { color: rgb(242, 184, 181); }
+/* Sized by its label: a fixed 200px left the value only a few pixels next to the English label. */
+.re-row > .re-blend { flex-shrink: 0; }
+.re-blend > .unity-base-field__label { min-width: 110px; }
+.re-blend > .unity-base-field__input { width: 64px; flex-grow: 0; }
+.re-notice { white-space: normal; color: var(--md-on-surface-variant); margin-left: 8px; margin-right: 8px; }
+
+/* ---------- Buttons: filled > tonal > text > icon ---------- */
+.re-button {
+ height: 32px;
+ min-width: 32px;
+ padding: 0 14px;
+ margin: 2px;
+ border-width: 0;
+ border-radius: var(--md-shape-full);
+ background-color: var(--md-surface-container-highest);
+ color: var(--md-on-surface);
+ -unity-font-style: normal;
+ transition-property: background-color, color;
+ transition-duration: 0.12s;
+}
+.re-button:hover { background-color: rgb(62, 64, 66); }
+.re-button:active { background-color: rgb(70, 72, 74); }
+.re-button:focus { border-width: 1px; border-color: var(--md-primary); }
+.re-button:disabled { opacity: 0.38; }
+
+.re-button--filled, .re-button--primary {
+ background-color: var(--md-primary);
+ color: var(--md-on-primary);
+ -unity-font-style: bold;
+}
+.re-button--filled:hover, .re-button--primary:hover { background-color: var(--md-primary-hover); }
+.re-button--filled:active, .re-button--primary:active { background-color: var(--md-primary-pressed); }
+
+.re-button--tonal { background-color: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+.re-button--tonal:hover { background-color: var(--md-secondary-container-hover); }
+
+.re-button--text, .re-button--quiet { background-color: transparent; color: var(--md-primary); padding: 0 10px; }
+.re-button--text:hover, .re-button--quiet:hover { background-color: var(--md-primary-hover-layer); }
+
+.re-button--icon { width: 32px; min-width: 32px; padding: 0; background-color: transparent; color: var(--md-on-surface-variant); }
+.re-button--icon:hover { background-color: var(--md-state-hover); color: var(--md-on-surface); }
+.re-button:hover:active { background-color: rgb(70, 72, 74); }
+.re-button--filled:hover:active, .re-button--primary:hover:active { background-color: var(--md-primary-pressed); }
+.re-button--tonal:hover:active { background-color: var(--md-secondary-container-hover); }
+.re-button--text:hover:active, .re-button--quiet:hover:active, .re-button--icon:hover:active { background-color: var(--md-state-pressed); }
+.re-button.is-active { background-color: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+
+.re-has-icon { flex-direction: row; align-items: center; justify-content: center; flex-shrink: 0; }
+.re-action-icon {
+ width: 18px;
+ height: 18px;
+ flex-shrink: 0;
+ font-size: 18px;
+ -unity-font-style: normal;
+ -unity-text-align: middle-center;
+ margin: 0;
+ padding: 0;
+}
+.re-action-caption { margin: 0 0 0 6px; padding: 0; flex-shrink: 0; white-space: nowrap; -unity-text-align: middle-center; }
+.re-icon-only { width: 32px; min-width: 32px; padding: 0; flex-grow: 0; }
+.re-icon-only .re-action-icon { font-size: 20px; width: 20px; height: 20px; }
+#play { width: 96px; }
+#save { min-width: 84px; }
+
+/* Segmented button */
+.re-segmented {
+ flex-direction: row;
+ border-width: 1px;
+ border-color: var(--md-outline);
+ border-radius: var(--md-shape-full);
+ overflow: hidden;
+ flex-shrink: 0;
+}
+.re-segment {
+ height: 28px;
+ margin: 0;
+ padding: 0 12px;
+ border-width: 0;
+ border-radius: 0;
+ background-color: transparent;
+ color: var(--md-on-surface);
+ font-size: 11px;
+}
+.re-segment:hover { background-color: var(--md-state-hover); }
+.re-segment.is-active { background-color: var(--md-secondary-container); color: var(--md-on-secondary-container); -unity-font-style: bold; }
+
+/* Filter chips */
+.re-chips { flex-direction: row; flex-wrap: wrap; flex-shrink: 0; margin: 2px 0 4px 0; }
+.re-chip {
+ flex-direction: row;
+ align-items: center;
+ height: 28px;
+ margin: 2px 6px 2px 0;
+ padding: 0 12px;
+ border-width: 1px;
+ border-color: var(--md-outline-variant);
+ border-radius: var(--md-shape-s);
+ background-color: transparent;
+ color: var(--md-on-surface-variant);
+}
+.re-chip:hover { background-color: var(--md-state-hover); color: var(--md-on-surface); }
+.re-chip:focus { border-color: var(--md-primary); }
+.re-chip .re-chip-check { display: none; font-size: 16px; width: 16px; height: 16px; margin-right: 4px; -unity-text-align: middle-center; }
+.re-chip .re-chip-label { margin: 0; padding: 0; }
+.re-chip.is-active { background-color: var(--md-secondary-container); border-color: var(--md-secondary-container); color: var(--md-on-secondary-container); padding-left: 8px; }
+.re-chip.is-active .re-chip-check { display: flex; }
+.re-chip:hover:active { background-color: var(--md-state-pressed); }
+.re-segment:hover:active { background-color: var(--md-state-pressed); }
+
+/* ---------- Fields ---------- */
+.re-app .unity-base-field { margin-top: 2px; margin-bottom: 2px; }
+/* Centred against the 28px inputs; Unity top-aligns labels, which left them about 5px high. */
+.re-app .unity-base-field__label { color: var(--md-on-surface-variant); align-self: center; }
+.re-row .unity-base-field__label, .re-toolbar .unity-base-field__label { min-width: 44px; }
+.re-app .unity-base-text-field__input,
+.re-app .unity-object-field__input,
+.re-app .unity-base-popup-field__input {
+ min-height: 28px;
+ background-color: var(--md-surface-container-high);
+ color: var(--md-on-surface);
+ border-width: 1px;
+ border-color: var(--md-outline-variant);
+ border-radius: var(--md-shape-s);
+ padding-left: 8px;
+ padding-right: 8px;
+}
+/* The object name and icon sit at the top of the taller 28px box otherwise. */
+.re-app .unity-object-field__input { align-items: center; }
+.re-app .unity-base-text-field__input:hover,
+.re-app .unity-object-field__input:hover,
+.re-app .unity-base-popup-field__input:hover { border-color: var(--md-outline); }
+.re-app .unity-base-text-field__input:focus,
+.re-app .unity-base-popup-field__input:focus { border-color: var(--md-primary); }
+.re-search .unity-base-text-field__input { border-radius: var(--md-shape-full); padding-left: 12px; }
+.re-time { width: 98px; }
+.re-time .unity-base-field__label { min-width: 20px; }
+.re-app .unity-toggle__checkmark { border-radius: var(--md-shape-xs); }
+
+/* ---------- Lists ---------- */
+.re-app .unity-list-view, .re-app .unity-scroll-view { background-color: transparent; }
+.re-app .unity-collection-view__item { border-radius: var(--md-shape-s); }
+.re-app .unity-collection-view__item:hover { background-color: var(--md-state-hover); }
+.re-app .unity-collection-view__item--selected { background-color: var(--md-secondary-container); }
+.re-app .unity-collection-view__item--selected:hover { background-color: var(--md-secondary-container-hover); }
+
+.re-material-shelf { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-height: 0; }
+.re-material-list { height: 0; flex-grow: 1; flex-basis: 0; flex-shrink: 1; min-height: 55px; margin: 4px 0; }
+/* Row height = fixedItemHeight in RimeEmoMaterialsUI.cs. */
+.re-material-row { flex-direction: row; align-items: center; padding: 0 10px; height: 26px; }
+.re-material-row.is-previewing { background-color: var(--md-state-pressed); }
+.re-material-name { flex-grow: 1; overflow: hidden; }
+.re-material-gesture { color: var(--md-on-surface-variant); font-size: 10px; }
+.re-material-shelf.is-drop-target { border-width: 2px; border-color: var(--md-primary); border-radius: var(--md-shape-m); }
+.re-material-type {
+ /* Fixed, not min: "Static" and "Dynamic" differ in English, which shifted the names after them. */
+ width: 58px;
+ flex-shrink: 0;
+ height: 20px;
+ margin: 0 8px 0 0;
+ padding: 0 6px;
+ border-radius: var(--md-shape-xs);
+ background-color: var(--md-surface-container-highest);
+ color: var(--md-on-surface-variant);
+ -unity-text-align: middle-center;
+ font-size: 10px;
+}
+.re-material-type.is-dynamic { background-color: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+
+/* ---------- Panel dividers ---------- */
+.re-panel-divider {
+ width: 8px;
+ min-width: 8px;
+ flex-shrink: 0;
+ cursor: resize-horizontal;
+ border-left-width: 3px;
+ border-right-width: 3px;
+ border-left-color: var(--md-surface);
+ border-right-color: var(--md-surface);
+ background-color: transparent;
+}
+.re-panel-divider:hover, .re-panel-divider:focus, .re-panel-divider.is-dragging { background-color: var(--md-primary); }
+/* Sits in the gap between the workspace cards and the bottom card, so it adds no height. */
+.re-panel-divider--horizontal {
+ width: auto;
+ min-width: 0;
+ height: 8px;
+ min-height: 8px;
+ margin: -4px 12px;
+ cursor: resize-vertical;
+ border-left-width: 0;
+ border-right-width: 0;
+ border-top-width: 3px;
+ border-bottom-width: 3px;
+ border-top-color: var(--md-surface);
+ border-bottom-color: var(--md-surface);
+}
+.re-editor { flex-grow: 2; flex-basis: 0; min-width: 400px; }
+.re-preview { flex-grow: 1; flex-basis: 0; min-width: 250px; min-height: 150px; }
+.re-preview-host { flex-grow: 1; border-radius: var(--md-shape-m); overflow: hidden; background-color: var(--md-surface-container-low); }
+
+/* ---------- Timeline & side sheet ---------- */
+.re-imported-curves { height: 240px; }
+.re-timeline-body { flex-direction: row; height: 240px; margin-top: 4px; }
+.re-timeline-host {
+ flex-grow: 1;
+ min-height: 240px;
+ flex-basis: 0;
+ min-width: 450px;
+ overflow: hidden;
+ border-radius: var(--md-shape-m);
+}
+.re-queue-details {
+ width: 300px;
+ flex-shrink: 0;
+ padding-left: 8px;
+ margin-left: 4px;
+}
+.re-auto-split { margin-top: 6px; padding: 8px; border-radius: var(--md-shape-m); background-color: var(--md-surface-container-high); }
+.re-auto-split .unity-base-field { margin-bottom: 3px; }
+.re-auto-split .unity-float-field { width: 245px; flex-shrink: 0; }
+.re-auto-split .unity-base-field__label { min-width: 130px; }
+.re-auto-split .re-hint { white-space: normal; }
+.re-timeline .auto-split-interval { background-color: rgba(230, 170, 55, 0.24); }
+.re-timeline .auto-split-boundary { background-color: rgba(255, 190, 55, 0.9); }
+.re-inspector { flex-grow: 1; flex-basis: 0; min-height: 0; padding: 6px 4px; }
+.re-inspector .unity-base-field { flex-direction: column; align-items: stretch; }
+.re-inspector .unity-base-field__label { min-width: 150px; align-self: auto; }
+.re-timeline { flex-grow: 1; background-color: var(--md-surface-container-low); overflow: hidden; }
+.track-label { background-color: var(--md-surface-container); color: var(--md-on-surface-variant); -unity-text-align: middle-center; }
+.track-label.is-selected { color: var(--md-primary); -unity-font-style: bold; }
+.track-lane { border-bottom-width: 1px; border-bottom-color: var(--md-surface-container-high); }
+.track-span {
+ background-color: var(--md-surface-container-highest);
+ color: var(--md-on-surface);
+ border-radius: var(--md-shape-s);
+ overflow: hidden;
+ font-size: 10px;
+ padding: 0 7px;
+ -unity-text-align: middle-center;
+}
+.track-span:hover { background-color: rgb(66, 70, 74); }
+.track-span.is-selected { background-color: var(--md-primary-container); color: var(--md-on-primary-container); }
+.track-span.is-pose { padding: 0; }
+.timeline-key, .timeline-hold-key { border-width: 0; border-radius: 2px; background-color: var(--md-primary); }
+.timeline-key:hover, .timeline-hold-key:hover { background-color: var(--md-on-primary-container); }
+.playhead { background-color: rgb(255, 180, 112); }
+/* Video-editor feedback: where a drag snapped, the selection box, and what dragging each part does. */
+.timeline-snap-guide { background-color: rgb(255, 214, 102); }
+.timeline-marquee { border-width: 1px; border-color: var(--md-primary); background-color: rgba(168, 199, 250, 0.12); }
+.timeline-key, .timeline-hold-key, .timeline-keep-key { cursor: resize-horizontal; }
+.track-span { cursor: slide-arrow; }
+.ruler { cursor: resize-horizontal; }
+.timeline-tick { color: var(--md-outline); border-left-width: 1px; border-left-color: var(--md-outline-variant); padding-left: 3px; font-size: 10px; }
+.timeline-timing-span { margin: 0; padding: 0; border-radius: var(--md-shape-xs); font-size: 10px; overflow: hidden; white-space: nowrap; -unity-text-align: middle-center; }
+.timeline-transition { background-color: rgb(84, 66, 40); color: rgb(255, 221, 179); }
+.timeline-transition:hover, .timeline-transition.is-selected { background-color: rgb(120, 92, 52); color: rgb(255, 238, 214); }
+.timeline-keep { background-color: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+.timeline-keep:hover, .timeline-keep.is-selected { background-color: rgb(28, 108, 52); color: rgb(226, 255, 232); }
+.timeline-keep-key { background-color: rgb(120, 220, 150); border-radius: 2px; }
+.timeline-keep-key:hover, .timeline-keep-key.is-selected { background-color: rgb(196, 238, 208); }
+#queue-timing-hint { white-space: normal; color: var(--md-on-surface-variant); margin-top: 4px; }
+
+/* ---------- Static expression editor ---------- */
+.re-static-controls { height: 300px; flex-shrink: 0; }
+.re-shape-filters { margin-top: 2px; }
+.re-shape-filters .re-chips { margin-right: 8px; }
+/* User groups follow the part chips, separated by a thin rule. */
+.re-group-tabs { padding-left: 8px; border-left-width: 1px; border-left-color: var(--md-outline-variant); }
+.re-chip--add { min-width: 28px; padding: 0 8px; -unity-text-align: middle-center; }
+.re-group-editor { flex-direction: row; align-items: center; flex-shrink: 0; }
+.re-group-name { width: 140px; margin: 2px 4px 2px 0; }
+.re-group-option { margin: 0 6px 0 2px; }
+/* Forms built in code (parts-and-groups window): one label width so inputs line up. */
+.re-compact-field > .unity-base-field__label { min-width: 72px; width: 72px; }
+.re-compact-field { margin-right: 8px; }
+.re-shape-list { flex-grow: 1; flex-basis: 0; min-height: 0; margin-top: 2px; }
+.re-shape-empty { margin: 12px 8px; }
+/* Row height = fixedItemHeight in RimeEmoStaticToolkitUI.cs. */
+.re-shape-row { height: 32px; flex-direction: row; align-items: center; padding-left: 8px; }
+.re-shape-label { width: 30%; min-width: 120px; max-width: 280px; overflow: hidden; -unity-text-overflow-position: end; text-overflow: ellipsis; white-space: nowrap; }
+/* A short slider: the whole 0–100 range stays within a small mouse movement. */
+.re-shape-slider { flex-grow: 1; flex-basis: 0; min-width: 120px; max-width: 480px; margin: 0 4px 0 0; }
+.re-shape-row #shape-flatten { max-width: 480px; }
+/* The value field sits beside the slider at the theme's 28px input height; the vertical margin is removed so it fits the 32px row. */
+.re-shape-row .re-shape-number { width: 60px; min-width: 60px; flex-shrink: 0; margin: 0 0 0 8px; }
+.re-shape-number .unity-base-text-field__input { -unity-text-align: middle-right; }
+.re-shape-row.is-unset .re-shape-number { opacity: 0.55; }
+.re-shape-row.is-unset:hover .re-shape-number { opacity: 1; }
+.re-shape-row .re-button { height: 26px; min-width: 26px; padding: 0 6px; background-color: transparent; color: var(--md-on-surface-variant); }
+.re-shape-row .re-button:hover { background-color: var(--md-state-hover); color: var(--md-on-surface); }
+.re-shape-row.is-default { border-left-width: 3px; border-left-color: var(--md-primary); }
+/* Not in the clip: the face uses Default Face. Moving the slider adds it. */
+.re-shape-row.is-unset .re-shape-label { color: var(--md-on-surface-variant); }
+.re-shape-row.is-unset .re-shape-slider { opacity: 0.55; }
+.re-shape-row.is-unset:hover .re-shape-slider { opacity: 1; }
+
+/* ---------- Gesture page ---------- */
+.re-embedded { padding: 0; background-color: transparent; }
+.re-gesture-rule { flex-direction: row; align-items: center; min-height: 40px; padding: 2px 4px; border-radius: var(--md-shape-s); }
+.re-gesture-rule:hover { background-color: var(--md-state-hover); }
+.re-gesture-hand { width: 150px; flex-shrink: 0; }
+.re-gesture-hand > .unity-base-field__label { min-width: 46px; width: 46px; }
+
+/* Hand lists: one row per hand shape. */
+.re-hands { flex-direction: row; flex-wrap: wrap; }
+.re-hand-column { flex-grow: 1; flex-basis: 0; min-width: 300px; margin: 0 4px; }
+.re-hand-title { -unity-font-style: bold; color: var(--md-primary); margin: 6px 4px 2px 4px; }
+.re-hand-row { flex-direction: row; align-items: center; min-height: 32px; padding: 0 4px; border-radius: var(--md-shape-s); }
+.re-hand-row:hover { background-color: var(--md-state-hover); }
+.re-hand-gesture { width: 104px; flex-shrink: 0; color: var(--md-on-surface-variant); }
+/* Base fields do not shrink by default; without the basis and shrink the field kept its 430px content width and pushed into the other hand. */
+.re-hand-row .unity-object-field { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; }
+
+/* Combination table: rows = left hand, columns = right hand. */
+.re-matrix { margin: 4px 0; }
+.re-matrix-row { flex-direction: row; }
+.re-matrix-corner, .re-matrix-head {
+ flex-grow: 1; flex-basis: 0; min-width: 0;
+ height: 26px; margin: 1px; padding: 0 4px;
+ font-size: 10px; color: var(--md-on-surface-variant);
+ -unity-text-align: middle-center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.re-matrix-cell {
+ flex-grow: 1; flex-basis: 0; min-width: 0;
+ height: 26px; margin: 1px; padding: 0 4px;
+ border-width: 0; border-radius: var(--md-shape-xs);
+ font-size: 10px; -unity-text-align: middle-center;
+ overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.re-matrix-cell:hover { border-width: 1px; border-color: var(--md-on-surface); }
+.re-cell--default { background-color: var(--md-surface-container-high); color: var(--md-outline); }
+.re-cell--left { background-color: var(--md-primary-container); color: var(--md-on-primary-container); }
+.re-cell--right { background-color: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
+.re-cell--both { background-color: rgb(77, 61, 117); color: rgb(234, 221, 255); }
+.re-cell--choice { background-color: rgb(91, 67, 0); color: rgb(255, 223, 160); }
+.re-cell--unresolved { background-color: rgb(140, 29, 24); color: rgb(255, 218, 214); -unity-font-style: bold; }
+.re-legend { flex-direction: row; flex-wrap: wrap; margin: 2px 0 6px 0; }
+.re-legend-item { font-size: 10px; padding: 2px 8px; margin: 2px 6px 2px 0; border-radius: var(--md-shape-xs); }
+
+/* ---------- Guide ---------- */
+.re-guide-card {
+ position: absolute;
+ right: 16px;
+ top: 64px;
+ width: 340px;
+ padding: 16px;
+ background-color: var(--md-surface-container-high);
+ border-radius: 20px;
+ border-width: 1px;
+ border-color: var(--md-outline-variant);
+}
+#guide-title { -unity-font-style: bold; font-size: 14px; }
+.re-guide-text { white-space: normal; margin-top: 10px; margin-bottom: 8px; color: var(--md-on-surface-variant); }
+.re-app .re-guide-target, .re-app .re-button.re-guide-target, .re-app .re-rail-item.re-guide-target {
+ border-width: 2px;
+ border-color: var(--md-primary);
+ border-radius: var(--md-shape-m);
+ opacity: 1;
+}
+
+/* ---------- Japanese ----------
+ * Unity draws Japanese with a fallback font that caches each glyph in the weight it was first drawn with:
+ * a bold title made the same characters bold in every hint and button. Under Japanese, emphasis comes from
+ * size and colour instead of weight. (.re-lang-ja is set by RimeEmoLocalization.MarkLanguage.)
+ */
+.re-lang-ja .re-brand, .re-lang-ja .re-rail-item.is-active, .re-lang-ja .re-title, .re-lang-ja .re-heading,
+.re-lang-ja .re-button--filled, .re-lang-ja .re-button--primary, .re-lang-ja .re-segment.is-active,
+.re-lang-ja .track-label.is-selected, .re-lang-ja .re-hand-title, .re-lang-ja .re-cell--unresolved,
+.re-lang-ja #guide-title { -unity-font-style: normal; }
+.re-lang-ja .re-title, .re-lang-ja .re-heading { font-size: 14px; }

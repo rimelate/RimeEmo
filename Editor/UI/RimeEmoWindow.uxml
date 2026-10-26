@@ -1,0 +1,192 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+  <!--
+    Material 3 layout: top app bar, navigation rail, one page at a time.
+    Element names are referenced from C#; rename them only together with the code.
+  -->
+  <ui:VisualElement name="dynamic-root" class="re-app">
+    <ui:VisualElement name="utility-toolbar" class="re-top-bar">
+      <ui:Label text="RimeEmo" class="re-brand" />
+      <uie:ObjectField name="avatar" label="Avatar" class="re-grow re-top-avatar" />
+      <ui:Button name="save" text="保存" class="re-button re-button--filled" />
+      <ui:Button name="apply" text="アバターに適用" class="re-button re-top-apply" />
+      <ui:VisualElement class="re-top-spacer" />
+      <ui:Button name="show-guide" text="使い方" class="re-button re-button--text" />
+      <ui:DropdownField name="language" label="Language / 言語" class="re-language" />
+    </ui:VisualElement>
+    <ui:VisualElement class="re-body">
+      <ui:VisualElement name="nav-rail" class="re-rail">
+        <ui:Button name="static-mode" text="表情" tooltip="Shape Keyを調整して、ひとつの表情を作ります。" class="re-rail-item" />
+        <ui:Button name="dynamic-mode" text="動き" tooltip="表情を時間順に並べ、長さと補間を調整します。" class="re-rail-item" />
+        <ui:Button name="gesture-settings" text="Gesture" class="re-rail-item" />
+        <ui:VisualElement class="re-grow" />
+        <ui:Button name="settings" text="設定" tooltip="アバターの設定、顔メッシュ、部位分類、データの整理" class="re-rail-item" />
+      </ui:VisualElement>
+      <ui:VisualElement name="main" class="re-main">
+        <ui:Label name="notice" class="re-banner" />
+        <ui:VisualElement name="updates-banner" class="re-banner re-row re-wrap" style="display: none;">
+          <ui:Label name="updates-message" class="re-grow" />
+          <ui:Button name="updates-release" text="更新内容" class="re-button re-button--text" />
+          <ui:Button name="updates-vcc" text="VCCを開く" class="re-button re-button--tonal" />
+          <ui:Button name="updates-dismiss" text="この版の通知を閉じる" class="re-button re-button--text" />
+        </ui:VisualElement>
+
+        <!-- Editing page: expressions and motion share the shelf and preview. -->
+        <ui:VisualElement name="editor-page" class="re-page">
+          <ui:VisualElement class="re-workspace">
+            <ui:VisualElement name="editor" class="re-editor re-card">
+              <ui:VisualElement name="material-shelf" class="re-material-shelf">
+                <ui:VisualElement class="re-row">
+                  <ui:Label name="material-heading" text="素材" class="re-title" />
+                  <ui:VisualElement class="re-grow" />
+                  <ui:Button name="material-default" text="＋ 新しい表情" tooltip="空の表情を作成します。動かしたShape KeyだけがClipに入ります。" class="re-button re-button--tonal" />
+                </ui:VisualElement>
+                <ui:TextField name="material-search" label="検索" class="re-search" />
+                <ui:ListView name="material-list" class="re-material-list" />
+                <ui:VisualElement class="re-row re-wrap">
+                  <ui:Button name="material-import" text="素材を追加" tooltip="このアバターのアニメーションから選んで追加します。一覧へのドロップも使えます。" class="re-button re-button--text" />
+                  <ui:Button name="material-edit" text="表情を編集" class="re-button re-button--tonal" />
+                  <ui:Button name="material-more" text="その他" class="re-button re-button--text" />
+                </ui:VisualElement>
+                <ui:Label name="material-hint" class="re-hint" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="preview-panel" class="re-preview re-card">
+              <ui:VisualElement class="re-row">
+                <ui:Label text="プレビュー" class="re-title" />
+                <ui:VisualElement class="re-grow" />
+                <ui:VisualElement class="re-segmented">
+                  <ui:Button name="default-preview" text="Default Face" class="re-segment" />
+                  <ui:Button name="motion-preview" text="編集中の表情" class="re-segment" />
+                </ui:VisualElement>
+              </ui:VisualElement>
+              <ui:Label name="preview-time" class="re-hint" />
+              <ui:Slider name="static-time" label="素材の時刻" show-input-field="true" />
+              <ui:VisualElement name="preview-host" class="re-preview-host" />
+              <ui:VisualElement class="re-row">
+                <ui:Label text="ドラッグ: 回転 / ホイール: ズーム" class="re-hint re-grow" />
+                <ui:Button name="capture-frame" text="この時刻の表情を取り出す" tooltip="編集中の動的アニメーションを現在時刻で評価し、静的な表情を新規作成します。動的な下書きは保持します。" class="re-button re-button--tonal" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+          </ui:VisualElement>
+
+          <ui:VisualElement name="motion-controls" class="re-card re-bottom">
+            <ui:VisualElement name="motion-toolbar" class="re-row">
+              <ui:TextField name="motion-name" label="名前" class="re-grow" />
+              <ui:Toggle name="loop" label="ループ" />
+              <ui:Button name="new-motion" text="＋ 新しい動き" class="re-button re-button--tonal" />
+              <ui:Button name="save-as" text="別名で保存" class="re-button re-button--text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="timeline-toolbar" class="re-row">
+              <ui:Button name="play" text="▶ 再生" class="re-button re-button--filled" />
+              <ui:Button name="stop" text="■" tooltip="先頭へ戻して停止" class="re-button re-button--icon" />
+              <ui:Button name="previous" text="◀" tooltip="前のキー" class="re-button re-button--icon" />
+              <ui:Button name="next" text="▶" tooltip="次のキー" class="re-button re-button--icon" />
+              <ui:FloatField name="time" label="秒" class="re-time" />
+              <ui:Button name="split-queue" text="分割" tooltip="再生位置で選択キューを分割 (S)" class="re-button re-button--tonal" />
+              <ui:VisualElement class="re-grow" />
+              <ui:Toggle name="magnet" label="スナップ" value="true" tooltip="キューの端や再生位置に吸着します (N)" />
+              <ui:Toggle name="snap" label="60fps" value="true" />
+              <ui:Button name="fit" text="全体表示" class="re-button re-button--text" />
+            </ui:VisualElement>
+            <ui:VisualElement name="block-editor" class="re-timeline-body">
+              <ui:VisualElement name="timeline-host" class="re-timeline-host" />
+              <ui:VisualElement name="queue-details" class="re-queue-details">
+                <ui:VisualElement name="queue-actions" class="re-row re-wrap">
+                  <ui:Label name="queue-selection" class="re-hint re-grow" />
+                  <ui:Button name="duplicate-queue" text="複製" tooltip="選択キューを同じパーツの末尾へ複製 (Ctrl+D)" class="re-button re-button--icon" />
+                  <ui:Button name="delete-queue" text="削除" tooltip="選択キューを削除 (Delete)" class="re-button re-button--icon" />
+                  <ui:Button name="auto-split" text="自動分割" class="re-button re-button--icon" />
+                </ui:VisualElement>
+                <ui:ScrollView name="inspector" class="re-inspector" />
+                <ui:Button name="add" text="＋ キー" class="re-button re-button--tonal" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="imported-curves" class="re-imported-curves" />
+            <ui:VisualElement class="re-row">
+              <ui:Label name="block-hint" text="Space: 再生 · ←→: 1フレーム · ↑↓: 前後の切れ目 · S: 分割 · Ctrl+C/X/V: コピー・切り取り・貼り付け · Alt+←→: キューを移動 · 空白をドラッグ: 範囲選択 · N: スナップ" tooltip="マウス: 端をドラッグでトリミング、中央で移動、境界のつまみで保持・移行、空白をドラッグで範囲選択、ルーラーで再生位置、ダブルクリックでキーを追加、右クリックでメニュー&#10;選択: Ctrl+クリックで追加、Shift+クリックで範囲、Ctrl+Aですべて、Escで解除&#10;再生位置: Spaceで再生・一時停止、←→で1フレーム（Shiftで10フレーム）、↑↓で前後の切れ目、Home/Endで先頭・末尾&#10;編集: Sで分割、Ctrl+Dで複製、Deleteで削除、Ctrl+C/X/Vでコピー・切り取り・再生位置に貼り付け、Alt+←→でキューを1フレーム移動（Shiftで10フレーム）&#10;表示: Nでスナップの切り替え、=/-で拡大・縮小、\で全体表示、ホイールで拡大、Shift+ホイールで横移動" class="re-hint re-grow" />
+              <ui:Label name="motion-status" class="re-hint" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+
+          <ui:VisualElement name="static-controls" class="re-card re-static-controls">
+            <ui:VisualElement class="re-row">
+              <ui:TextField name="static-name" label="Clip名" class="re-grow" />
+              <ui:TextField name="shape-search" label="Shape Key検索" class="re-grow re-search" />
+            </ui:VisualElement>
+            <ui:Label name="static-notice" class="re-hint" />
+            <ui:VisualElement name="default-face-actions" class="re-row re-wrap" style="display: none;">
+              <ui:Button name="default-face-capture" text="シーンの表情を読み込む" tooltip="今のシーンのアバターの顔を、Default Faceとして取り込みます" class="re-button re-button--tonal" />
+              <ui:Button name="default-face-from-clip" text="アニメーションをシーンに書き出す…" tooltip="選んだアニメーションの顔をシーンのアバターに書き込み、Default Faceにします" class="re-button re-button--text" />
+            </ui:VisualElement>
+            <ui:VisualElement class="re-row re-wrap re-shape-filters">
+              <ui:VisualElement name="shape-part-tabs" class="re-chips" />
+              <ui:VisualElement name="shape-group-tabs" class="re-chips re-group-tabs" />
+              <ui:VisualElement name="shape-state" class="re-segmented" />
+              <ui:VisualElement class="re-grow" />
+              <ui:Label name="shape-hidden" class="re-hint" />
+              <ui:Button name="shape-filter-menu" text="絞り込み" tooltip="候補から隠すShape Keyを選びます" class="re-button re-button--text" />
+            </ui:VisualElement>
+            <ui:ListView name="shape-list" class="re-shape-list" />
+            <ui:Label name="shape-empty" class="re-hint re-shape-empty" />
+          </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Gesture page: the shared panel is cloned into this host by C#. -->
+        <ui:VisualElement name="gesture-page" class="re-page" style="display: none;">
+          <ui:VisualElement name="gesture-unsaved" class="re-banner re-row">
+            <ui:Label text="編集中の動きは保存されていません。割り当てるには保存してください。" class="re-grow" />
+            <ui:Button name="gesture-save-draft" text="動きを保存" class="re-button re-button--tonal" />
+          </ui:VisualElement>
+          <ui:VisualElement name="gesture-host" class="re-grow" />
+        </ui:VisualElement>
+
+        <!-- Settings page: everything needed once per avatar. -->
+        <ui:ScrollView name="settings-page" class="re-page" style="display: none;">
+          <ui:VisualElement class="re-card">
+            <ui:Label name="updates-version" class="re-title" />
+            <ui:Toggle name="updates-automatic" label="更新を自動確認する" />
+            <ui:Label text="ツールを開いている間、12時間に1回確認します。更新はVCC / ALCOMで行ってください。" class="re-hint" />
+            <ui:Label name="updates-status" class="re-hint" />
+            <ui:VisualElement class="re-row re-wrap">
+              <ui:Button name="updates-check" text="今すぐ更新を確認" class="re-button re-button--tonal" />
+              <ui:Button name="updates-copy-url" text="VPM URLをコピー" class="re-button re-button--text" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement class="re-card">
+            <ui:Label text="アバター" class="re-title" />
+            <uie:ObjectField name="project" label="Project" />
+            <uie:ObjectField name="fx" label="読込元FX" tooltip="セットアップ時に、このFXのClipを素材として取り込みます。FXの生成には使いません（アバターのFXはそのまま残り、RimeEmoのレイヤーが上に重なります）。" />
+            <ui:VisualElement class="re-row">
+              <ui:Label text="設定はアバターから自動読込。Project欄は既存設定の関連付けに使用します。関連付け後はSceneを保存してください。" class="re-hint re-grow" />
+              <ui:Button name="setup" text="新規セットアップ" class="re-button re-button--filled" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement class="re-card">
+            <ui:Label text="顔メッシュと部位" class="re-title" />
+            <ui:DropdownField name="face" label="顔メッシュ" />
+            <ui:VisualElement class="re-row re-wrap">
+              <ui:Button name="part-settings" text="部位設定" class="re-button re-button--tonal" />
+              <ui:Button name="reload-preview" text="アバターを再読込" class="re-button re-button--text" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement class="re-card">
+            <ui:Label text="Shape Keyグループ" class="re-title" />
+            <uie:ObjectField name="shape-group-set" label="グループ" tooltip="別のアバターのShapeGroupsファイルを指定すると、同じグループを共有します。" />
+            <ui:Label name="shape-group-usage" class="re-hint" />
+            <ui:VisualElement class="re-row re-wrap">
+              <ui:Button name="shape-group-edit" text="グループを編集" class="re-button re-button--tonal" />
+              <ui:Button name="shape-group-copy" text="複製してこのアバター専用にする" class="re-button re-button--text" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement class="re-card">
+            <ui:Label text="データの整理" class="re-title" />
+            <ui:VisualElement class="re-row">
+              <ui:Label text="どの動きからも使われていない表情コピーと、Sceneから参照されていない古いFX生成物をゴミ箱へ移動します。" class="re-hint re-grow" />
+              <ui:Button name="cleanup" text="未使用データを整理" class="re-button re-button--tonal" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+        </ui:ScrollView>
+      </ui:VisualElement>
+    </ui:VisualElement>
+  </ui:VisualElement>
+</ui:UXML>

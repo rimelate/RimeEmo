@@ -1,0 +1,83 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+ <!--
+   Shared by the Gesture page of the main window and the standalone Gesture window.
+   Flow: assign per hand → choose which hand wins → check the table → apply.
+ -->
+ <ui:VisualElement name="gesture-root" class="re-app">
+  <ui:VisualElement name="gesture-targets" class="re-card">
+   <ui:Label text="Gesture割り当て / FX生成" class="re-title"/>
+   <uie:ObjectField name="gesture-project" label="Project"/>
+   <uie:ObjectField name="gesture-avatar" label="Avatar"/>
+  </ui:VisualElement>
+  <ui:ScrollView name="gesture-content" class="re-grow">
+
+   <ui:VisualElement class="re-card">
+    <ui:VisualElement class="re-row">
+     <ui:Label text="1. 手の形に割り当てる" class="re-title re-grow"/>
+     <ui:Button name="rules-import" text="元FXから取り込む" tooltip="元FXの単純なAnyStateのGesture条件を取り込みます" class="re-button re-button--text"/>
+    </ui:VisualElement>
+    <ui:Label text="手の形ごとに、素材一覧やProjectから表情・動きをドロップします。空欄の手の形はDefault Faceになります。" class="re-hint"/>
+    <ui:VisualElement class="re-hands">
+     <ui:VisualElement class="re-hand-column">
+      <ui:Label text="左手" class="re-hand-title"/>
+      <ui:VisualElement name="hand-left"/>
+     </ui:VisualElement>
+     <ui:VisualElement class="re-hand-column">
+      <ui:Label text="右手" class="re-hand-title"/>
+      <ui:VisualElement name="hand-right"/>
+     </ui:VisualElement>
+    </ui:VisualElement>
+   </ui:VisualElement>
+
+   <ui:VisualElement class="re-card">
+    <ui:Label text="2. 両手で違う形をしたとき" class="re-title"/>
+    <ui:VisualElement class="re-row re-wrap">
+     <ui:VisualElement name="gesture-priority" class="re-segmented">
+      <ui:Button name="priority-left" text="左手を優先" class="re-segment"/>
+      <ui:Button name="priority-right" text="右手を優先" class="re-segment"/>
+      <ui:Button name="priority-manual" text="組み合わせごとに選ぶ" class="re-segment"/>
+     </ui:VisualElement>
+     <ui:Label name="priority-hint" class="re-hint re-grow"/>
+    </ui:VisualElement>
+   </ui:VisualElement>
+
+   <ui:VisualElement class="re-card">
+    <ui:Label text="3. 結果を確認する" class="re-title"/>
+    <ui:Label text="縦が左手、横が右手です。セルをクリックすると、その組み合わせだけ個別に設定できます。" class="re-hint"/>
+    <ui:VisualElement name="gesture-matrix" class="re-matrix"/>
+    <ui:VisualElement name="gesture-legend" class="re-legend"/>
+    <ui:Label text="個別に設定した組み合わせ" class="re-subtitle"/>
+    <ui:VisualElement name="conflicts"/>
+   </ui:VisualElement>
+
+   <ui:VisualElement class="re-card">
+    <ui:VisualElement class="re-row">
+     <ui:Label text="両手の組み合わせ（上級）" class="re-title re-grow"/>
+     <ui:Button name="rule-add" text="＋ 組み合わせを追加" class="re-button re-button--tonal"/>
+    </ui:VisualElement>
+    <ui:Label text="左右の手が決まった組み合わせのときだけ使う表情です。片手の割り当てより優先されます。" class="re-hint"/>
+    <ui:VisualElement name="rules"/>
+   </ui:VisualElement>
+
+   <ui:VisualElement class="re-card">
+    <ui:Label text="4. アバターへ適用" class="re-title"/>
+    <ui:Label name="apply-state" class="re-hint"/>
+    <ui:Label name="source-gesture-hint" class="re-hint"/>
+    <ui:Toggle name="source-gesture-override" text="元FXの手の表情を止める（これらのShape KeyもRimeEmoが書き込む）"/>
+    <ui:VisualElement class="re-row re-wrap">
+     <ui:Button name="fx-apply" text="再生成して適用" tooltip="FXを再生成して、Sceneのアバターへ適用します" class="re-button re-button--filled"/>
+     <ui:Button name="fx-inspect" text="生成FXを選択" class="re-button re-button--text"/>
+     <ui:Button name="fx-remove" text="適用を解除" class="re-button re-button--text"/>
+     <ui:Button name="rules-save" text="保存" class="re-button re-button--text"/>
+     <ui:VisualElement class="re-grow"/>
+     <ui:FloatField name="gesture-blend" label="切替の補間（秒）" class="re-blend"/>
+    </ui:VisualElement>
+    <ui:Label name="gesture-status" class="re-hint"/>
+    <ui:Label name="build-errors" class="re-hint re-error"/>
+    <ui:Label name="build-summary" class="re-hint"/>
+    <ui:Label text="生成するFXは、RimeEmoのGestureレイヤー1枚だけです。アバター自身のFXはそのまま残し、MA Merge Animator（追加）で一番上に重ねます。書き込むのは、RimeEmoの表情がDefault Faceから変えるShape Keyだけで、それ以外（リップシンクやまばたきなど）はアバターのFXのまま動きます。" class="re-hint"/>
+    <ui:Label text="適用すると、アバターの子にMA Merge Animator付きのオブジェクトを置きます。FXは毎回同じファイルを上書きするので、適用を繰り返してもファイルは増えません。編集後は「再生成して適用」か、上部の「変更を適用」で反映してください。" class="re-hint"/>
+   </ui:VisualElement>
+  </ui:ScrollView>
+ </ui:VisualElement>
+</ui:UXML>

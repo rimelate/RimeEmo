@@ -1,0 +1,7 @@
+{
+  "name": "RimeEmo.Editor",
+  "rootNamespace": "RimeEmo.Editor",
+  "includePlatforms": ["Editor"],
+  "references": ["RimeEmo.Runtime"],
+  "autoReferenced": true
+}

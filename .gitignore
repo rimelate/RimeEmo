@@ -1,0 +1,19 @@
+# Local avatar data and backups are never distributed.
+/Working/
+/Working.meta
+/Generated/
+/Generated.meta
+/Backup~/
+/Backup~.meta
+/dist~/
+/dist~.meta
+/Library/
+/Temp/
+/Logs/
+/obj/
+/.vs/
+*.csproj
+*.sln
+__pycache__/
+*.pyc
+/.DS_Store

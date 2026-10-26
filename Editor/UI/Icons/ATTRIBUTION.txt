@@ -1,0 +1,11 @@
+Material Symbols Rounded
+Copyright Google LLC. Licensed under the Apache License, Version 2.0 (see LICENSE.txt).
+Source: https://github.com/google/material-design-icons (variablefont/MaterialSymbolsRounded[FILL,GRAD,opsz,wght].ttf)
+https://fonts.google.com/icons
+
+Modifications by RimeEmo: static instances (FILL 0 and FILL 1, wght 400, GRAD 0, opsz 24)
+subset to the icons listed in MaterialSymbolsRounded-Subset.codepoints.txt.
+Files: MaterialSymbolsRounded-Subset.ttf, MaterialSymbolsRounded-Fill-Subset.ttf
+
+MaterialIcons-Regular.ttf (Material Icons, Apache License 2.0) is no longer used by RimeEmo and can be deleted
+together with MaterialIcons-Regular.codepoints.txt and their .meta files.
