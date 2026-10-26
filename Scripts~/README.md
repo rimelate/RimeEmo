@@ -11,9 +11,8 @@
 https://raw.githubusercontent.com/rimelate/RimeEmo/vpm/index.json
 ```
 
-GitHub Pagesは必須ではありません。案内ページを使う場合はSettings > Pagesで
-`Deploy from a branch`、`vpm`、`/(root)`を設定すると
-`https://rimelate.github.io/RimeEmo/`を使えます。
+案内ページはSettings > PagesのSourceを`GitHub Actions`に設定し、
+`Deploy install page`で公開します。URLは`https://rimelate.github.io/RimeEmo/`です。
 
 ## 次回以降
 
