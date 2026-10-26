@@ -1,8 +1,121 @@
-<!doctype html><html lang="ja"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>RimeEmo — VPM</title>
-<style>body{font:18px system-ui;max-width:760px;margin:80px auto;padding:24px;background:#16151d;color:#eee}a{color:#c6b5ff}code{overflow-wrap:anywhere}.button{display:inline-block;padding:16px 28px;border-radius:28px;background:#c6b5ff;color:#211638;text-decoration:none}</style>
-<h1>RimeEmo</h1><p>VRChat向け 表情・動き編集ツール</p>
-<p><a class="button" href="vcc://vpm/addRepo?url=https%3A%2F%2Fraw.githubusercontent.com%2Frimelate%2FRimeEmo%2Fvpm%2Findex.json">VCCに追加</a></p>
-<p>ALCOMでは下記URLをリポジトリとして追加してください。</p><p><code>https://raw.githubusercontent.com/rimelate/RimeEmo/vpm/index.json</code></p>
-<p>最新版: 0.1.0</p>
-<p><a href="https://github.com/rimelate/RimeEmo#readme">使い方</a> · <a href="https://github.com/rimelate/RimeEmo/releases">更新内容</a></p></html>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="VRChatの表情・動き編集ツール RimeEmo。VCCにリポジトリを追加して、アバターの表情づくりを始めましょう。">
+<meta name="theme-color" content="#17151d">
+<title>RimeEmo — VCCに追加</title>
+<style>
+:root{color-scheme:dark;--bg:#17151d;--surface:#211e29;--line:#3a3546;--text:#f3eef9;--muted:#bcb3c9;--accent:#cbb6ff;--ink:#24163e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.75 system-ui,-apple-system,"Segoe UI","Noto Sans JP",sans-serif}
+a{color:inherit;text-underline-offset:4px}a:hover{color:var(--accent)}button,input{font:inherit}button,a{touch-action:manipulation}
+:focus-visible{outline:3px solid #eadfff;outline-offset:5px}.wrap{width:min(1040px,calc(100% - 48px));margin:auto}
+.nav{display:flex;justify-content:space-between;align-items:center;padding:28px 0;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;font-size:20px;letter-spacing:-.6px;font-weight:700}
+.brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--accent);color:var(--ink);font-size:20px}
+.nav-link{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);text-decoration:none}svg{width:20px;height:20px;flex:none}
+.hero{padding:68px 0 48px}.eyebrow{display:flex;align-items:center;gap:12px;color:var(--accent);font-size:11px;font-weight:700;letter-spacing:2.5px}
+.eyebrow:before{content:"";width:24px;height:1px;background:var(--accent)}
+h1{margin:16px 0 12px;font-size:clamp(48px,8vw,82px);line-height:1.1;font-weight:650;letter-spacing:-4px}
+.lead{margin:0;color:var(--muted);font-size:18px;line-height:1.9}
+.install{display:grid;grid-template-columns:1.15fr 1fr;gap:36px;padding:36px;border:1px solid #514460;border-radius:24px;background:linear-gradient(125deg,#2d263b,var(--surface) 70%)}
+.install-heading{display:flex;align-items:center;gap:12px;margin-bottom:16px}h2{font-size:23px;line-height:1.5;letter-spacing:-.5px;margin:0}
+.badge{display:inline-flex;align-items:center;border:1px solid #5a4b72;border-radius:20px;padding:2px 10px;font:12px/1.7 ui-monospace,monospace;color:#dfcfff;white-space:nowrap}
+.install p{margin:0 0 24px;color:var(--muted);font-size:14px}
+.primary{display:flex;align-items:center;justify-content:space-between;gap:24px;max-width:330px;padding:17px 23px;background:var(--accent);color:var(--ink);border-radius:14px;text-decoration:none;font-weight:700;font-size:17px;transition:background .15s,transform .15s}
+.primary:hover{background:#ddceff;color:var(--ink);transform:translateY(-1px)}.primary svg{width:23px;height:23px}
+.hint{display:block;margin-top:12px;color:var(--muted);font-size:12px}
+.requirements{border-left:1px solid #4a3d59;padding-left:34px;display:flex;flex-direction:column;justify-content:center}
+.requirements h3{margin:0 0 16px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:1.4px}
+.requirements ul{padding:0;margin:0;list-style:none;display:grid;gap:9px}.requirements li{display:flex;align-items:center;gap:10px;font-size:14px}
+.check{color:var(--accent);width:17px;height:17px}.requirements a{color:var(--text)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:30px;padding:40px 0}
+.step-number{font:12px/1.2 ui-monospace,monospace;color:var(--accent);letter-spacing:1px}
+.steps h3{font-size:15px;margin:10px 0 6px;font-weight:600}.steps p{font-size:13px;color:var(--muted);margin:0}
+.manual{border-top:1px solid var(--line);padding:30px 0 38px}.manual h2{font-size:16px;margin-bottom:7px;font-weight:600}
+.manual p{font-size:13px;color:var(--muted);margin:0 0 15px}.url-row{display:flex;gap:10px;align-items:stretch}
+.url-row input{min-width:0;flex:1;background:#100f15;border:1px solid var(--line);border-radius:10px;color:#cfc5dc;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;padding:15px}
+.copy{border:1px solid #635276;background:#30273e;color:#e3d2fc;padding:10px 20px;border-radius:10px;white-space:nowrap;cursor:pointer;font-size:13px;font-weight:600}.copy:hover{background:#403252}
+#copy-status{min-height:22px;margin:8px 0 0;font-size:12px;color:var(--accent)}
+footer{display:flex;justify-content:space-between;align-items:center;gap:18px;border-top:1px solid var(--line);padding:22px 0 32px;color:var(--muted);font-size:12px}
+.footer-links{display:flex;gap:22px;flex-wrap:wrap}footer a{text-decoration:none}
+@media(max-width:680px){
+.wrap{width:calc(100% - 36px)}.nav{padding:22px 0}.hero{padding:44px 0 32px}h1{letter-spacing:-2.5px}.lead{font-size:15px}
+.install{grid-template-columns:1fr;gap:28px;padding:26px 22px;border-radius:20px}.primary{max-width:none}
+.requirements{border-left:0;border-top:1px solid #4a3d59;padding:22px 0 0}.requirements h3{margin-bottom:12px}.requirements ul{gap:7px}
+.steps{grid-template-columns:1fr;gap:24px;padding:30px 0}.steps article{display:grid;grid-template-columns:24px 1fr;column-gap:15px}
+.step-number{grid-row:1/3;padding-top:5px}.steps h3{margin:0 0 5px}.steps p{grid-column:2}
+.url-row{flex-wrap:wrap}.url-row input{flex-basis:100%;font-size:11px}.copy{width:100%;min-height:44px}footer{align-items:flex-start;flex-direction:column}
+}
+@media(prefers-reduced-motion:reduce){.primary{transition:none}.primary:hover{transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="nav">
+<a class="brand" href="./" aria-label="RimeEmo ホーム"><span class="brand-mark" aria-hidden="true">R</span>RimeEmo</a>
+<a class="nav-link" href="https://github.com/rimelate/RimeEmo">GitHub <span aria-hidden="true">↗</span></a>
+</header>
+<main>
+<section class="hero" aria-labelledby="title">
+<div class="eyebrow">VRCHAT EXPRESSION EDITOR</div>
+<h1 id="title">RimeEmo</h1>
+<p class="lead">表情をつくる。動きをつなぐ。<br>アバターの表情づくりを、ひとつのツールで。</p>
+</section>
+<section class="install" aria-labelledby="install-title">
+<div>
+<div class="install-heading"><h2 id="install-title">さっそく始める</h2><span class="badge" id="version">VPM</span></div>
+<p>Creator Companionにリポジトリを追加して、<br>RimeEmoをインストールできます。</p>
+<a class="primary" id="add-vcc" href="vcc://vpm/addRepo?url=https%3A%2F%2Fraw.githubusercontent.com%2Frimelate%2FRimeEmo%2Fvpm%2Findex.json">
+<span>VCCに追加</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</a>
+<span class="hint">VCCをインストールしたPCで開いてください。</span>
+</div>
+<aside class="requirements" aria-label="必要な環境">
+<h3>必要な環境</h3>
+<ul>
+<li><svg class="check" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg>Unity 2022.3</li>
+<li><svg class="check" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg>VRChat SDK — Avatars</li>
+<li><svg class="check" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 10 4 4 8-8"/></svg><a href="https://modular-avatar.nadena.dev/">Modular Avatar <span aria-hidden="true">↗</span></a></li>
+</ul>
+</aside>
+</section>
+<section class="steps" aria-label="インストールの手順">
+<article><span class="step-number">01</span><h3>リポジトリを追加</h3><p>上のボタンを押し、VCCで追加を承認します。</p></article>
+<article><span class="step-number">02</span><h3>プロジェクトに導入</h3><p>使いたいプロジェクトの管理画面で、RimeEmoを追加します。</p></article>
+<article><span class="step-number">03</span><h3>Unityで開く</h3><p>Tools → RimeEmo → Openから、表情の編集を始められます。</p></article>
+</section>
+<section class="manual" aria-labelledby="manual-title">
+<h2 id="manual-title">ALCOM・手動で追加する場合</h2>
+<p>リポジトリ追加画面に、以下のURLを貼り付けてください。ボタンでVCCが開かない場合も使えます。</p>
+<div class="url-row">
+<input id="repo-url" aria-label="VPMリポジトリURL" readonly spellcheck="false" value="https://raw.githubusercontent.com/rimelate/RimeEmo/vpm/index.json">
+<button class="copy" id="copy-url" type="button">URLをコピー</button>
+</div>
+<p id="copy-status" role="status" aria-live="polite"></p>
+</section>
+</main>
+<footer><span>RimeEmo by rimelate</span><div class="footer-links"><a href="https://github.com/rimelate/RimeEmo#readme">使い方</a><a href="https://github.com/rimelate/RimeEmo/releases">更新履歴・ZIP</a><a href="https://github.com/rimelate/RimeEmo/issues">お問い合わせ</a></div></footer>
+</div>
+<script>
+const urlField = document.getElementById('repo-url');
+document.getElementById('copy-url').addEventListener('click', async () => {
+  const status = document.getElementById('copy-status');
+  try {
+    await navigator.clipboard.writeText(urlField.value);
+    status.textContent = 'コピーしました。VCC / ALCOMのリポジトリ追加画面に貼り付けてください。';
+  } catch {
+    urlField.focus(); urlField.select();
+    status.textContent = 'URLを選択しました。コピーして貼り付けてください。';
+  }
+});
+fetch('https://raw.githubusercontent.com/rimelate/RimeEmo/vpm/latest.json', {cache:'no-cache'})
+  .then(response => { if (!response.ok) throw new Error('unavailable'); return response.json(); })
+  .then(release => {
+    if (release.name === 'io.github.rimelate.rimeemo' && /^\d+\.\d+\.\d+$/.test(release.version))
+      document.getElementById('version').textContent = 'v' + release.version;
+  }).catch(() => {});
+</script>
+</body>
+</html>
