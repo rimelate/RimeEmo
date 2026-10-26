@@ -42,7 +42,7 @@ def manifest_for(root, tag):
     version_parts(manifest["version"])
     if manifest["name"] != PACKAGE or tag != "v" + manifest["version"]:
         raise ValueError("Release tag must match package.json: v" + manifest["version"])
-    expected = GITHUB + "/releases/download/" + tag + "/" + PACKAGE + "-" + manifest["version"] + ".zip"
+    expected = GITHUB + "/releases/download/" + tag + "/" + "RimeEmo_v" + manifest["version"] + ".zip"
     if manifest["url"] != expected:
         raise ValueError("Update package.json url to match the release tag")
     # Restrict migration to code folders; never remove Working or Generated.
@@ -89,7 +89,7 @@ def build(root, output, tag):
     manifest = manifest_for(root, tag)
     files = package_files(root)
     output.mkdir(parents=True, exist_ok=True)
-    archive = output / (PACKAGE + "-" + manifest["version"] + ".zip")
+    archive = output / ("RimeEmo_v" + manifest["version"] + ".zip")
     with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as zipped:
         for name in files:
             info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
@@ -144,7 +144,7 @@ def collect_listing(releases, download):
             raise ValueError("Tag/manifest mismatch")
         if bool(release["prerelease"]) != bool(prerelease):
             raise ValueError("GitHub prerelease flag must agree with the SemVer version")
-        filename = PACKAGE + "-" + version + ".zip"
+        filename = "RimeEmo_v" + version + ".zip"
         expected = GITHUB + "/releases/download/v" + version + "/" + filename
         if filename not in assets or assets[filename]["browser_download_url"] != expected or manifest.get("url") != expected:
             raise ValueError("Package archive missing or URL mismatch for " + version)

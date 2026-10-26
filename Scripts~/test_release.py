@@ -44,7 +44,7 @@ class ReleaseTests(unittest.TestCase):
         downloads = {}
         releases = []
         for version, draft in [("0.9.0", False), ("0.10.0", False), ("1.0.0-beta.1", False), ("2.0.0", True)]:
-            filename = release.PACKAGE + "-" + version + ".zip"
+            filename = "RimeEmo_v" + version + ".zip"
             url = release.GITHUB + "/releases/download/v" + version + "/" + filename
             manifest_url = "manifest/" + version
             zip_url = "zip/" + version
