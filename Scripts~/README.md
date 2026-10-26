@@ -21,7 +21,7 @@ GitHub Pagesは必須ではありません。案内ページを使う場合はSe
 2. `CHANGELOG.md`を更新してコミットする。
 3. バージョンに一致する`v0.1.1`等のReleaseを公開する。
 
-Actionsが配布ZIP・manifest・ファイル一覧とSHA-256の監査記録を添付し、
+Actionsは配布ZIPだけをReleaseに添付し、監査記録はActionsのArtifactに保存します。
 `vpm`ブランチの`index.json`と`latest.json`を更新します。
 公開に失敗した場合はActionsから同じタグを指定して再実行できます。
 Releaseを削除した場合も、残っている公開済みタグを指定して再実行すると一覧を再構築できます。
@@ -55,7 +55,12 @@ python Scripts~/release.py build --tag v0.1.0 --output dist~
 Unity 2022.3.22f1のテスト用プロジェクトで`Tools > RimeEmo > Run Core Checks`を実行します。
 更新判定、数値バージョン比較、非正規URLの拒否、UI要素もこのチェックに含まれます。
 
-更新確認はツールを開いているときに12時間ごと。HTTPSで公開メタデータをGETするだけで、
+更新の自動確認はツールを開いたときに1回だけ行います。HTTPSで公開メタデータをGETするだけで、
 アバター名、アセット、プロジェクト内容などを送信しません。バッチモードでは通信しません。
 自動確認の設定はUnity Editorの設定に保存されます。通信失敗は設定ページに表示し、
 編集中のデータやプレビューには影響しません。
+
+同じバージョンを修正して再配布する場合だけ、`Publish VPM release`の手動実行で
+対象タグを入力し、`Replace the existing tag and ZIP...`を有効にします。
+検証後、タグとZIPを選択ブランチのコミットに差し替え、VPM一覧も再生成します。
+通常の更新ではバージョンを上げ、新しいReleaseを公開してください。

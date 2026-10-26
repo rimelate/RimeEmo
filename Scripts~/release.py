@@ -1,7 +1,7 @@
 """Build audited VPM archives and the VPM listing. Python 3.10+, standard library only."""
 import argparse
 import hashlib
-import html
+import io
 import json
 import os
 from pathlib import Path
@@ -132,33 +132,39 @@ def collect_listing(releases, download):
     for release in releases:
         if release["draft"]:
             continue
-        assets = {asset["name"]: asset for asset in release.get("assets", [])}
-        if "package.json" not in assets:
+        tag = release["tag_name"]
+        if not tag.startswith("v"):
             continue
-        manifest = json.loads(download(assets["package.json"]["url"]))
-        if manifest.get("name") != PACKAGE:
-            raise ValueError("Unexpected package in release " + release["tag_name"])
-        version = manifest["version"]
+        version = tag[1:]
         core, prerelease = version_parts(version)
-        if release["tag_name"] != "v" + version:
-            raise ValueError("Tag/manifest mismatch")
+        assets = {asset["name"]: asset for asset in release.get("assets", [])}
+        filename = "RimeEmo_v" + version + ".zip"
+        expected = GITHUB + "/releases/download/" + tag + "/" + filename
+        if filename not in assets or assets[filename]["browser_download_url"] != expected:
+            raise ValueError("Package archive missing or URL mismatch for " + version)
+        data = download(assets[filename]["url"])
+        # Read the package manifest directly from the archive. Release assets only need the ZIP.
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            if archive.namelist().count("package.json") != 1 or archive.getinfo("package.json").file_size > 65536:
+                raise ValueError("Missing, duplicate or oversized package manifest")
+            manifest = json.loads(archive.read("package.json").decode("utf-8-sig"))
+        if manifest.get("name") != PACKAGE or manifest.get("version") != version:
+            raise ValueError("Tag/package manifest mismatch for " + tag)
+        if manifest.get("url") != expected:
+            raise ValueError("Manifest download URL mismatch for " + tag)
         if bool(release["prerelease"]) != bool(prerelease):
             raise ValueError("GitHub prerelease flag must agree with the SemVer version")
-        filename = "RimeEmo_v" + version + ".zip"
-        expected = GITHUB + "/releases/download/v" + version + "/" + filename
-        if filename not in assets or assets[filename]["browser_download_url"] != expected or manifest.get("url") != expected:
-            raise ValueError("Package archive missing or URL mismatch for " + version)
-        manifest["zipSHA256"] = hashlib.sha256(download(assets[filename]["url"])).hexdigest()
+        manifest["zipSHA256"] = hashlib.sha256(data).hexdigest()
         versions[version] = manifest
         if not prerelease:
             stable.append((core, version))
-    listing = {"name": "RimeEmo", "id": PACKAGE + ".repository", "url": LISTING,
-               "author": "rimelate", "packages": {PACKAGE: {"versions": versions}}}
+    index = {"name": "RimeEmo", "id": PACKAGE + ".repository", "url": LISTING,
+             "author": "rimelate", "packages": {PACKAGE: {"versions": versions}}}
     latest = {"name": PACKAGE, "version": "", "releaseUrl": ""}
     if stable:
         version = max(stable)[1]
         latest.update(version=version, releaseUrl=GITHUB + "/releases/tag/v" + version)
-    return listing, latest
+    return index, latest
 
 def listing(output):
     releases = []
@@ -173,18 +179,10 @@ def listing(output):
     output.mkdir(parents=True, exist_ok=True)
     write_json(output / "index.json", index)
     write_json(output / "latest.json", latest)
-    # Optional GitHub Pages landing page; raw VPM URLs work without Pages.
-    link = "vcc://vpm/addRepo?url=" + urllib.parse.quote(LISTING, safe="")
-    page_html = f"""<!doctype html><html lang="ja"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>RimeEmo — VPM</title>
-<style>body{{font:18px system-ui;max-width:760px;margin:80px auto;padding:24px;background:#16151d;color:#eee}}a{{color:#c6b5ff}}code{{overflow-wrap:anywhere}}.button{{display:inline-block;padding:16px 28px;border-radius:28px;background:#c6b5ff;color:#211638;text-decoration:none}}</style>
-<h1>RimeEmo</h1><p>VRChat向け 表情・動き編集ツール</p>
-<p><a class="button" href="{html.escape(link)}">VCCに追加</a></p>
-<p>ALCOMでは下記URLをリポジトリとして追加してください。</p><p><code>{LISTING}</code></p>
-<p>最新版: {html.escape(latest["version"] or "未公開")}</p>
-<p><a href="{GITHUB}#readme">使い方</a> · <a href="{GITHUB}/releases">更新内容</a></p></html>"""
-    (output / "index.html").write_text(page_html, encoding="utf-8")
+    site = Path(__file__).resolve().parents[1] / "Website~" / "index.html"
+    (output / "index.html").write_bytes(site.read_bytes())
     (output / ".nojekyll").write_text("", encoding="utf-8")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

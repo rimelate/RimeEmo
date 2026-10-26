@@ -8,6 +8,10 @@ on:
         description: "Existing published release tag (for example v0.1.0)"
         required: true
         type: string
+      rebuild:
+        description: "Replace the existing tag and ZIP with this branch (same package version)"
+        type: boolean
+        default: false
 permissions:
   contents: write
 concurrency:
@@ -22,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          ref: ${{ inputs.rebuild && github.sha || github.event.release.tag_name || inputs.tag }}
           persist-credentials: true
       - uses: actions/setup-python@v5
         with:
@@ -33,8 +37,16 @@ jobs:
           python -c 'import json,os; r=json.load(open(os.environ["RUNNER_TEMP"]+"/release.json")); assert not r["isDraft"]; assert r["isPrerelease"] == ("-" in r["tagName"]), "Prerelease flag must match tag"'
           python -m unittest discover -s Scripts~ -p 'test_*.py'
           python Scripts~/release.py build --tag "$RELEASE_TAG" --output "$RUNNER_TEMP/package"
-      - name: Attach VPM package
-        run: gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/package/"* --clobber
+      - name: Keep package audit in workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-audit
+          path: ${{ runner.temp }}/package/package-audit.json
+      - name: Update tag for an explicitly requested rebuild
+        if: github.event_name == 'workflow_dispatch' && inputs.rebuild
+        run: gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG" -f sha="$GITHUB_SHA" -F force=true
+      - name: Attach VPM ZIP
+        run: gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/package/"*.zip --clobber
       - name: Generate listing and stable update notification
         run: python Scripts~/release.py listing --output "$RUNNER_TEMP/listing"
       - name: Publish VPM branch
@@ -59,3 +71,12 @@ jobs:
             git -C "$RUNNER_TEMP/vpm" commit -m "Update RimeEmo VPM listing"
             git -C "$RUNNER_TEMP/vpm" push origin HEAD:refs/heads/vpm
           fi
+      - name: Remove obsolete metadata attachments
+        shell: bash
+        run: |
+          gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' > "$RUNNER_TEMP/asset-names.txt"
+          while IFS= read -r name; do
+            case "$name" in
+              package.json|package-audit.json) gh release delete-asset "$RELEASE_TAG" "$name" --yes ;;
+            esac
+          done < "$RUNNER_TEMP/asset-names.txt"

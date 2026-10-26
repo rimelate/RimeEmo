@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using UnityEditor;
@@ -16,7 +15,6 @@ namespace RimeEmo.Editor
         internal const string ListingUrl = "https://raw.githubusercontent.com/rimelate/RimeEmo/vpm/index.json";
         private const string LatestUrl = "https://raw.githubusercontent.com/rimelate/RimeEmo/vpm/latest.json";
         private const string Prefix = "RimeEmo.Updates.";
-        private const double IntervalSeconds = 12 * 60 * 60;
         private static readonly Regex SemVer = new Regex(@"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?\z", RegexOptions.CultureInvariant);
 
         [Serializable]
@@ -68,7 +66,6 @@ namespace RimeEmo.Editor
                 EditorPrefs.SetBool(Prefix + "Automatic", value);
                 if (!value) Cancel();
                 Changed?.Invoke();
-                if (value) Check();
             }
         }
 
@@ -92,10 +89,6 @@ namespace RimeEmo.Editor
                 Changed?.Invoke();
                 return;
             }
-            double now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            double.TryParse(EditorPrefs.GetString(Prefix + "LastAttempt", "0"), NumberStyles.Float, CultureInfo.InvariantCulture, out double last);
-            if (!force && now >= last && now - last < IntervalSeconds) return;
-            EditorPrefs.SetString(Prefix + "LastAttempt", now.ToString(CultureInfo.InvariantCulture));
             if (force) EditorPrefs.DeleteKey(Prefix + "Ignored");
             State = CheckState.Checking;
             try
@@ -135,7 +128,7 @@ namespace RimeEmo.Editor
             }
         }
 
-        private static void Cancel()
+        internal static void Cancel()
         {
             EditorApplication.update -= Poll;
             if (request != null) { request.Abort(); request.Dispose(); request = null; }

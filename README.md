@@ -4,7 +4,9 @@ Unity 2022.3向けのVRChat表情編集ツールです。静的なAnimationClip�
 
 ## インストール・更新
 
-VCC / ALCOMに次のVPMリポジトリを追加し、プロジェクト管理画面から **RimeEmo** を追加してください。
+[配布ページで「VCCに追加」をクリック](https://rimelate.github.io/RimeEmo/)し、プロジェクト管理画面から **RimeEmo** を追加してください。
+
+ALCOMを使用する場合や手動で登録する場合は、次のVPMリポジトリURLを追加してください。
 
 ```text
 https://raw.githubusercontent.com/rimelate/RimeEmo/vpm/index.json
@@ -17,7 +19,7 @@ Unity 2022.3を対象にしています。アバターへの適用にはModular 
 VPMへの移行ではツールのコードフォルダーだけを置き換え、ローカルの作業データは保持します。
 
 新しい安定版が公開されるとツール内に通知します。`設定`ページから手動確認、
-自動確認の有効・無効、VPM URLのコピーができます。自動確認は12時間ごとで、更新の適用はVCC / ALCOMで行います。
+自動確認の有効・無効、VPM URLのコピーができます。自動確認はツールを開いたときだけ行い、更新の適用はVCC / ALCOMで行います。
 
 GitHubと配布ZIPに含めるのはツール本体だけです。
 `Working`・`Generated`・`Backup~`、アバターや購入アセット由来のデータは含めません。

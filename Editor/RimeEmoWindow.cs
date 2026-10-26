@@ -40,6 +40,7 @@ namespace RimeEmo.Editor
             preview = new RimeEmoPreview();
             RimeEmoLocalization.Changed += LanguageChanged;
             RimeEmoUpdates.Changed += RefreshUpdates;
+            EditorApplication.delayCall += CheckUpdatesOnOpen;
             RefreshAvatar();
             Undo.undoRedoPerformed += Changed;
             RimeEmoClassificationWindow.ClassificationChanged += ClassificationEdited;
@@ -57,6 +58,8 @@ namespace RimeEmo.Editor
             EndStaticGesture();
             RimeEmoLocalization.Changed -= LanguageChanged;
             RimeEmoUpdates.Changed -= RefreshUpdates;
+            EditorApplication.delayCall -= CheckUpdatesOnOpen;
+            RimeEmoUpdates.Cancel();
             retainedTimeline?.EndInteraction();
             Undo.undoRedoPerformed -= Changed;
             RimeEmoClassificationWindow.ClassificationChanged -= ClassificationEdited;
@@ -68,6 +71,12 @@ namespace RimeEmo.Editor
             EditorApplication.hierarchyChanged -= AvatarMayHaveChanged;
             preview?.Dispose(); preview = null;
             DestroyTemporary();
+        }
+
+        private void CheckUpdatesOnOpen()
+        {
+            // Run once per window opening, never on UI rebuilds or a recurring timer.
+            if (this) RimeEmoUpdates.Check();
         }
 
         private void DestroyTemporary()

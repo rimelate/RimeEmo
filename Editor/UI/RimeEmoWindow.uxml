@@ -145,7 +145,7 @@
           <ui:VisualElement class="re-card">
             <ui:Label name="updates-version" class="re-title" />
             <ui:Toggle name="updates-automatic" label="更新を自動確認する" />
-            <ui:Label text="ツールを開いている間、12時間に1回確認します。更新はVCC / ALCOMで行ってください。" class="re-hint" />
+            <ui:Label text="ツールを開いたときだけ確認します。更新はVCC / ALCOMで行ってください。" class="re-hint" />
             <ui:Label name="updates-status" class="re-hint" />
             <ui:VisualElement class="re-row re-wrap">
               <ui:Button name="updates-check" text="今すぐ更新を確認" class="re-button re-button--tonal" />

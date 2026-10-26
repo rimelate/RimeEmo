@@ -10,7 +10,7 @@ namespace RimeEmo.Editor
             { "VCCを開く", "Open VCC" },
             { "この版の通知を閉じる", "Dismiss this version" },
             { "更新を自動確認する", "Check for updates automatically" },
-            { "ツールを開いている間、12時間に1回確認します。更新はVCC / ALCOMで行ってください。", "Checks every 12 hours while the tool is open. Install updates using VCC / ALCOM." },
+            { "ツールを開いたときだけ確認します。更新はVCC / ALCOMで行ってください。", "Checks only when you open the tool. Install updates using VCC / ALCOM." },
             { "今すぐ更新を確認", "Check for updates now" },
             { "VPM URLをコピー", "Copy VPM URL" },
             { "RimeEmo {0} が公開されています（現在 {1}）。", "RimeEmo {0} is available (installed: {1})." },

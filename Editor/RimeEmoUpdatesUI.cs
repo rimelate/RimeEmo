@@ -14,9 +14,6 @@ namespace RimeEmo.Editor
             Button("updates-dismiss", RimeEmoUpdates.Dismiss);
             Button("updates-copy-url", () => UnityEditor.EditorGUIUtility.systemCopyBuffer = RimeEmoUpdates.ListingUrl);
             RefreshUpdates();
-            // This schedule pauses when the UI is detached, including when the window is closed.
-            toolkitRoot.schedule.Execute(() => RimeEmoUpdates.Check()).Every(60000);
-            RimeEmoUpdates.Check();
         }
 
         private void RefreshUpdates()
