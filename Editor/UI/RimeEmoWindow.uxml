@@ -141,63 +141,65 @@
         </ui:VisualElement>
 
         <!-- Settings page: everything needed once per avatar. -->
-        <ui:ScrollView name="settings-page" class="re-page" style="display: none;">
-          <ui:VisualElement class="re-card">
-            <ui:Label name="updates-version" class="re-title" />
-            <ui:Toggle name="updates-automatic" label="更新を自動確認する" />
-            <ui:Label text="ツールを開いたときだけ確認します。更新はVCC / ALCOMで行ってください。" class="re-hint" />
-            <ui:Label name="updates-status" class="re-hint" />
-            <ui:VisualElement class="re-row re-wrap">
-              <ui:Button name="updates-check" text="今すぐ更新を確認" class="re-button re-button--tonal" />
-              <ui:Button name="updates-copy-url" text="VPM URLをコピー" class="re-button re-button--text" />
+        <ui:VisualElement name="settings-page" class="re-page" style="display: none;">
+          <ui:ScrollView name="settings-scroll" class="re-settings-scroll">
+            <ui:VisualElement class="re-card">
+              <ui:Label name="updates-version" class="re-title" />
+              <ui:Toggle name="updates-automatic" label="更新を自動確認する" />
+              <ui:Label text="ツールを開いたときだけ確認します。更新はVCC / ALCOMで行ってください。" class="re-hint" />
+              <ui:Label name="updates-status" class="re-hint" />
+              <ui:VisualElement class="re-row re-wrap">
+                <ui:Button name="updates-check" text="今すぐ更新を確認" class="re-button re-button--tonal" />
+                <ui:Button name="updates-copy-url" text="VPM URLをコピー" class="re-button re-button--text" />
+              </ui:VisualElement>
             </ui:VisualElement>
+            <ui:VisualElement class="re-card">
+              <ui:Label text="アバター" class="re-title" />
+              <uie:ObjectField name="project" label="Project" />
+              <uie:ObjectField name="fx" label="読込元FX" tooltip="セットアップ時に、このFXのClipを素材として取り込みます。FXの生成には使いません（アバターのFXはそのまま残り、RimeEmoのレイヤーが上に重なります）。" />
+              <ui:VisualElement class="re-row">
+                <ui:Label text="設定はアバターから自動読込。Project欄は既存設定の関連付けに使用します。関連付け後はSceneを保存してください。" class="re-hint re-grow" />
+                <ui:Button name="setup" text="新規セットアップ" class="re-button re-button--filled" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="re-card">
+              <ui:Label text="顔メッシュと部位" class="re-title" />
+              <ui:DropdownField name="face" label="顔メッシュ" />
+              <ui:VisualElement class="re-row re-wrap">
+                <ui:Button name="part-settings" text="部位設定" class="re-button re-button--tonal" />
+                <ui:Button name="reload-preview" text="アバターを再読込" class="re-button re-button--text" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="re-card">
+              <ui:Label text="Shape Keyグループ" class="re-title" />
+              <uie:ObjectField name="shape-group-set" label="グループ" tooltip="別のアバターのShapeGroupsファイルを指定すると、同じグループを共有します。" />
+              <ui:Label name="shape-group-usage" class="re-hint" />
+              <ui:VisualElement class="re-row re-wrap">
+                <ui:Button name="shape-group-edit" text="グループを編集" class="re-button re-button--tonal" />
+                <ui:Button name="shape-group-copy" text="複製してこのアバター専用にする" class="re-button re-button--text" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="re-card">
+              <ui:Label text="データの整理" class="re-title" />
+              <ui:VisualElement class="re-row">
+                <ui:Label text="どの動きからも使われていない表情コピーと、Sceneから参照されていない古いFX生成物をゴミ箱へ移動します。" class="re-hint re-grow" />
+                <ui:Button name="cleanup" text="未使用データを整理" class="re-button re-button--tonal" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement name="support-contact-card" class="re-card">
+              <ui:Label text="お問い合わせ" class="re-title" />
+              <ui:VisualElement class="re-row re-wrap">
+                <ui:Label text="不具合報告・お問い合わせは、BOOTHのショップメッセージからお願いします。" class="re-hint re-grow" />
+                <ui:Button name="support-contact" text="問い合わせはこちら" tooltip="https://rimerime.booth.pm/" class="re-button re-button--filled" />
+              </ui:VisualElement>
+            </ui:VisualElement>
+          </ui:ScrollView>
+          <ui:VisualElement name="support-links" class="re-support-footer">
+            <ui:Button name="support-github" text="GitHub" tooltip="GitHub" class="re-button re-button--text re-social-link" />
+            <ui:Button name="support-booth" text="BOOTH" tooltip="BOOTH（商品ページ）" class="re-button re-button--text re-social-link" />
+            <ui:Button name="support-x" text="作者のX" tooltip="作者のX" class="re-button re-button--text re-social-link" />
           </ui:VisualElement>
-          <ui:VisualElement class="re-card">
-            <ui:Label text="リンク・お問い合わせ" class="re-title" />
-            <ui:VisualElement class="re-row re-wrap">
-              <ui:Button name="support-github" text="GitHub" tooltip="https://github.com/rimelate/RimeEmo" class="re-button re-button--text" />
-              <ui:Button name="support-booth" text="BOOTH" tooltip="https://rimerime.booth.pm/items/9056771" class="re-button re-button--text" />
-              <ui:Button name="support-x" text="作者のX" tooltip="https://x.com/rimevrc" class="re-button re-button--text" />
-            </ui:VisualElement>
-            <ui:Label text="不具合報告・お問い合わせは、BOOTHのショップメッセージからお願いします。" class="re-hint" />
-            <ui:VisualElement class="re-row re-wrap">
-              <ui:Button name="support-contact" text="問い合わせはこちら" tooltip="https://rimerime.booth.pm/" class="re-button re-button--filled" />
-            </ui:VisualElement>
-          </ui:VisualElement>
-          <ui:VisualElement class="re-card">
-            <ui:Label text="アバター" class="re-title" />
-            <uie:ObjectField name="project" label="Project" />
-            <uie:ObjectField name="fx" label="読込元FX" tooltip="セットアップ時に、このFXのClipを素材として取り込みます。FXの生成には使いません（アバターのFXはそのまま残り、RimeEmoのレイヤーが上に重なります）。" />
-            <ui:VisualElement class="re-row">
-              <ui:Label text="設定はアバターから自動読込。Project欄は既存設定の関連付けに使用します。関連付け後はSceneを保存してください。" class="re-hint re-grow" />
-              <ui:Button name="setup" text="新規セットアップ" class="re-button re-button--filled" />
-            </ui:VisualElement>
-          </ui:VisualElement>
-          <ui:VisualElement class="re-card">
-            <ui:Label text="顔メッシュと部位" class="re-title" />
-            <ui:DropdownField name="face" label="顔メッシュ" />
-            <ui:VisualElement class="re-row re-wrap">
-              <ui:Button name="part-settings" text="部位設定" class="re-button re-button--tonal" />
-              <ui:Button name="reload-preview" text="アバターを再読込" class="re-button re-button--text" />
-            </ui:VisualElement>
-          </ui:VisualElement>
-          <ui:VisualElement class="re-card">
-            <ui:Label text="Shape Keyグループ" class="re-title" />
-            <uie:ObjectField name="shape-group-set" label="グループ" tooltip="別のアバターのShapeGroupsファイルを指定すると、同じグループを共有します。" />
-            <ui:Label name="shape-group-usage" class="re-hint" />
-            <ui:VisualElement class="re-row re-wrap">
-              <ui:Button name="shape-group-edit" text="グループを編集" class="re-button re-button--tonal" />
-              <ui:Button name="shape-group-copy" text="複製してこのアバター専用にする" class="re-button re-button--text" />
-            </ui:VisualElement>
-          </ui:VisualElement>
-          <ui:VisualElement class="re-card">
-            <ui:Label text="データの整理" class="re-title" />
-            <ui:VisualElement class="re-row">
-              <ui:Label text="どの動きからも使われていない表情コピーと、Sceneから参照されていない古いFX生成物をゴミ箱へ移動します。" class="re-hint re-grow" />
-              <ui:Button name="cleanup" text="未使用データを整理" class="re-button re-button--tonal" />
-            </ui:VisualElement>
-          </ui:VisualElement>
-        </ui:ScrollView>
+        </ui:VisualElement>
       </ui:VisualElement>
     </ui:VisualElement>
   </ui:VisualElement>

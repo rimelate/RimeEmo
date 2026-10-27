@@ -16,9 +16,24 @@ class ReleaseTests(unittest.TestCase):
         self.assertTrue(any(p.endswith(".cs") for p in files))
         for name in files:
             self.assertNotIn(name.split("/")[0], ["Working", "Generated", "Backup~", ".git"])
-            self.assertNotIn(Path(name).suffix, [".anim", ".controller", ".asset", ".prefab", ".fbx", ".png"])
+            self.assertNotIn(Path(name).suffix, [".anim", ".controller", ".asset", ".prefab", ".fbx"])
+            if Path(name).suffix == ".png":
+                self.assertIn(name, {
+                    "Editor/UI/Icons/Link-github.png",
+                    "Editor/UI/Icons/Link-booth.png",
+                    "Editor/UI/Icons/Link-x.png",
+                })
         self.assertIn("Editor/UI/Icons/LICENSE.txt", files)
         self.assertIn("Editor/UI/Icons/ATTRIBUTION.txt", files)
+
+    def test_unreviewed_texture_is_rejected(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            icons = root / "Editor/UI/Icons"
+            icons.mkdir(parents=True)
+            (icons / "AvatarTexture.png").write_bytes(b"private texture")
+            with self.assertRaisesRegex(ValueError, "Unreviewed file"):
+                release.package_files(root)
 
     def test_build_is_reproducible_and_zip_has_manifest_at_root(self):
         version = json.loads((ROOT / "package.json").read_text())["version"]

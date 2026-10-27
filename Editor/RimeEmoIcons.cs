@@ -68,6 +68,7 @@ namespace RimeEmo.Editor
 
         internal static void Apply(VisualElement root, string uiFolder)
         {
+            ApplySupportIcons(root, uiFolder);
             if (!Load(uiFolder)) return; // All actions remain usable through their text labels.
             foreach (var pair in Glyphs)
             {
@@ -94,6 +95,28 @@ namespace RimeEmo.Editor
                     label.AddToClassList("re-action-caption");
                     button.Add(label);
                 }
+            }
+        }
+
+        private static void ApplySupportIcons(VisualElement root, string uiFolder)
+        {
+            foreach (string service in new[] { "github", "booth", "x" })
+            {
+                var button = root.Q<Button>("support-" + service);
+                if (button == null || button.Q<Image>("brand-icon") != null) continue;
+                var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(uiFolder + "Icons/Link-" + service + ".png");
+                if (!texture) continue; // Keep the text link if its icon is unavailable.
+                var icon = new Image
+                {
+                    name = "brand-icon", image = texture, scaleMode = ScaleMode.ScaleToFit,
+                    pickingMode = PickingMode.Ignore
+                };
+                icon.AddToClassList("re-brand-icon");
+                if (string.IsNullOrEmpty(button.tooltip)) button.tooltip = button.text;
+                button.text = "";
+                button.AddToClassList("re-has-icon");
+                button.AddToClassList("re-social-link--icon");
+                button.Add(icon);
             }
         }
 

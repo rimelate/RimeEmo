@@ -87,7 +87,7 @@
 .re-body { flex-direction: row; flex-grow: 1; min-height: 0; }
 .re-main { flex-grow: 1; min-width: 0; padding-right: 8px; padding-bottom: 8px; }
 .re-page { flex-grow: 1; min-height: 0; }
-#settings-page > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: 8px; }
+#settings-scroll > .unity-scroll-view__content-viewport > .unity-scroll-view__content-container { padding-bottom: 8px; }
 
 /* Shrinks first when the auto-split sheet opens, so the timeline controls stay inside 760px. */
 .re-workspace { flex-direction: row; flex-grow: 1; flex-basis: 0; min-height: 150px; }
@@ -541,3 +541,11 @@
 .re-lang-ja .track-label.is-selected, .re-lang-ja .re-hand-title, .re-lang-ja .re-cell--unresolved,
 .re-lang-ja #guide-title { -unity-font-style: normal; }
 .re-lang-ja .re-title, .re-lang-ja .re-heading { font-size: 14px; }
+
+/* Settings links stay at the bottom while the settings content scrolls. */
+.re-settings-scroll { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-height: 0; }
+.re-support-footer { flex-direction: row; justify-content: flex-end; align-items: center; flex-shrink: 0; padding: 8px 12px 4px 12px; }
+.re-social-link { min-width: 40px; height: 40px; margin-left: 8px; border-radius: 20px; }
+.re-social-link--icon { width: 40px; padding-left: 0; padding-right: 0; }
+.re-brand-icon { width: 22px; height: 22px; flex-shrink: 0; opacity: 0.8; }
+.re-social-link:hover .re-brand-icon, .re-social-link:focus .re-brand-icon { opacity: 1; }

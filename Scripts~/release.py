@@ -14,13 +14,14 @@ PACKAGE = "io.github.rimelate.rimeemo"
 REPOSITORY = "rimelate/RimeEmo"
 GITHUB = "https://github.com/" + REPOSITORY
 LISTING = "https://raw.githubusercontent.com/" + REPOSITORY + "/vpm/index.json"
-# Only known source and UI files can enter a package. No animations, textures,
+# Only known source and UI files can enter a package. No animations, avatar textures,
 # avatar settings, generated controllers, local backups or arbitrary binaries.
 CODE_EXTENSIONS = {".cs", ".asmdef"}
 UI_FILES = {
     "README.md", "RimeEmoWindow.uxml", "RimeEmoGestureWindow.uxml",
     "RimeEmoClassificationWindow.uxml", "RimeEmoTheme.uss", "RimeEmoCustom.uss",
     "Icons/ATTRIBUTION.txt", "Icons/LICENSE.txt",
+    "Icons/Link-github.png", "Icons/Link-booth.png", "Icons/Link-x.png",
     "Icons/MaterialIcons-Regular.codepoints.txt", "Icons/MaterialIcons-Regular.ttf",
     "Icons/MaterialSymbolsRounded-Fill-Subset.ttf",
     "Icons/MaterialSymbolsRounded-Subset.codepoints.txt",
