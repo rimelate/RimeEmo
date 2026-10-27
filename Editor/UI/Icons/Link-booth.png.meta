@@ -14,7 +14,7 @@ TextureImporter:
     wrapU: 1
     wrapV: 1
     wrapW: 1
-  maxTextureSize: 64
+  maxTextureSize: 128
   textureFormat: 1
   textureCompression: 0
   compressionQuality: 100

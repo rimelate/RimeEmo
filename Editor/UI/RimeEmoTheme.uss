@@ -544,8 +544,26 @@
 
 /* Settings links stay at the bottom while the settings content scrolls. */
 .re-settings-scroll { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-height: 0; }
-.re-support-footer { flex-direction: row; justify-content: flex-end; align-items: center; flex-shrink: 0; padding: 8px 12px 4px 12px; }
-.re-social-link { min-width: 40px; height: 40px; margin-left: 8px; border-radius: 20px; }
-.re-social-link--icon { width: 40px; padding-left: 0; padding-right: 0; }
-.re-brand-icon { width: 22px; height: 22px; flex-shrink: 0; opacity: 0.8; }
+.re-support-footer {
+ flex-direction: row;
+ justify-content: center;
+ align-items: center;
+ flex-shrink: 0;
+ min-height: 144px;
+ padding: 16px 24px;
+}
+.re-social-link {
+ width: 96px;
+ min-width: 96px;
+ height: 96px;
+ flex-shrink: 0;
+ margin: 0 12px;
+ border-radius: 16px;
+ color: var(--md-on-surface);
+}
+.re-social-link--icon { padding-left: 0; padding-right: 0; }
+.re-brand-icon { width: 48px; height: 48px; flex-shrink: 0; opacity: 0.9; }
+.re-button.re-social-link:hover { background-color: var(--md-state-hover); }
+.re-button.re-social-link:focus { border-color: var(--md-on-surface); }
+.re-button.re-social-link:active { background-color: var(--md-state-pressed); }
 .re-social-link:hover .re-brand-icon, .re-social-link:focus .re-brand-icon { opacity: 1; }

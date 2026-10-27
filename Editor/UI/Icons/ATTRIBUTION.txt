@@ -16,8 +16,9 @@ Source: https://github.com/simple-icons/simple-icons/tree/develop/icons
 License: https://creativecommons.org/publicdomain/zero/1.0/
 Converted from github.svg and x.svg to white 64px PNGs.
 
-Link-booth.png: BOOTH official app icon, copyright pixiv Inc.
-Source: https://rimerime.booth.pm/static-images/pwa/icon_size_180.png
-Resized proportionally to 64px; used to identify the BOOTH product link.
+Link-booth.png: BOOTH official white icon, copyright pixiv Inc.
+Source: https://pixiv1.app.box.com/s/yj9ymvhbnpcbj22vfkkzctugzv46cnos/file/1954332587470
+Rasterized from logo_icon_white.svg to a 128px PNG without changing its shape or colour;
+used to identify the BOOTH product link.
 
 Brand names and logos belong to their respective owners.
