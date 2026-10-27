@@ -153,6 +153,18 @@
             </ui:VisualElement>
           </ui:VisualElement>
           <ui:VisualElement class="re-card">
+            <ui:Label text="リンク・お問い合わせ" class="re-title" />
+            <ui:VisualElement class="re-row re-wrap">
+              <ui:Button name="support-github" text="GitHub" tooltip="https://github.com/rimelate/RimeEmo" class="re-button re-button--text" />
+              <ui:Button name="support-booth" text="BOOTH" tooltip="https://rimerime.booth.pm/items/9056771" class="re-button re-button--text" />
+              <ui:Button name="support-x" text="作者のX" tooltip="https://x.com/rimevrc" class="re-button re-button--text" />
+            </ui:VisualElement>
+            <ui:Label text="不具合報告・お問い合わせは、BOOTHのショップメッセージからお願いします。" class="re-hint" />
+            <ui:VisualElement class="re-row re-wrap">
+              <ui:Button name="support-contact" text="問い合わせはこちら" tooltip="https://rimerime.booth.pm/" class="re-button re-button--filled" />
+            </ui:VisualElement>
+          </ui:VisualElement>
+          <ui:VisualElement class="re-card">
             <ui:Label text="アバター" class="re-title" />
             <uie:ObjectField name="project" label="Project" />
             <uie:ObjectField name="fx" label="読込元FX" tooltip="セットアップ時に、このFXのClipを素材として取り込みます。FXの生成には使いません（アバターのFXはそのまま残り、RimeEmoのレイヤーが上に重なります）。" />

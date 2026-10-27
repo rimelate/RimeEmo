@@ -180,6 +180,15 @@ namespace RimeEmo.Editor
             toolkitDirty = true; RefreshToolkit();
             BindGuide();
             BindUpdates();
+            BindSupportLinks();
+        }
+
+        private void BindSupportLinks()
+        {
+            Button("support-github", () => Application.OpenURL(RimeEmoUpdates.RepositoryUrl));
+            Button("support-booth", () => Application.OpenURL("https://rimerime.booth.pm/items/9056771"));
+            Button("support-x", () => Application.OpenURL("https://x.com/rimevrc"));
+            Button("support-contact", () => Application.OpenURL("https://rimerime.booth.pm/"));
         }
 
         private void ShowPage(int next)

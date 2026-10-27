@@ -66,6 +66,6 @@ https://raw.githubusercontent.com/rimelate/RimeEmo/vpm/index.json
 
 - [操作マニュアル](https://github.com/rimelate/RimeEmo/blob/main/Documentation~/Manual.md) — 表情、タイムライン、Gesture、保存データの管理
 - [リリース一覧](https://github.com/rimelate/RimeEmo/releases) — 更新履歴と配布ZIP
-- [不具合報告・要望](https://github.com/rimelate/RimeEmo/issues) — 使用バージョン、操作手順、エラー内容を添えてください
+- [お問い合わせ（BOOTH）](https://rimerime.booth.pm/) — ショップのメッセージからご連絡ください。不具合の際は使用バージョン、操作手順、エラー内容を添えてください
 
 同梱アイコンのライセンス・クレジットは [ATTRIBUTION.txt](https://github.com/rimelate/RimeEmo/blob/main/Editor/UI/Icons/ATTRIBUTION.txt) を参照してください。

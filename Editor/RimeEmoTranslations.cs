@@ -6,6 +6,10 @@ namespace RimeEmo.Editor
     {
         internal static readonly Dictionary<string, string> English = new Dictionary<string, string>
         {
+            { "リンク・お問い合わせ", "Links & support" },
+            { "作者のX", "Creator's X" },
+            { "不具合報告・お問い合わせは、BOOTHのショップメッセージからお願いします。", "Please send bug reports and inquiries through the BOOTH shop messaging feature." },
+            { "問い合わせはこちら", "Contact via BOOTH" },
             { "更新内容", "Release notes" },
             { "VCCを開く", "Open VCC" },
             { "この版の通知を閉じる", "Dismiss this version" },
