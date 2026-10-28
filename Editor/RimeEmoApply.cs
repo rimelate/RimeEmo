@@ -49,6 +49,7 @@ namespace RimeEmo.Editor
                     errors.Add(RimeEmoLocalization.T("Modular Avatarの設定が対応していません: ") + setting[0]);
             }
             if (!project) return errors;
+            errors.AddRange(RimeEmoFaceMenu.ValidateApply(project));
             var own = FindApplied(project, avatar);
             if (own && !IsOwned(project, own)) errors.Add(RimeEmoLocalization.T("適用先と同名のオブジェクトがあります。自動で変更できません。"));
             foreach (var component in avatar.GetComponentsInChildren(MergeType, true).Cast<Component>())
@@ -92,15 +93,14 @@ namespace RimeEmo.Editor
             string controllerPath = AssetDatabase.GetAssetPath(controller);
             // Current output lives under GeneratedRoot; older numbered Build folders sit under the settings' folder.
             bool generated = controllerPath.StartsWith(RimeEmoAssets.GeneratedRoot + "/", StringComparison.Ordinal) || controllerPath.StartsWith(parent, StringComparison.Ordinal);
-            return generated && child.transform.childCount == 0
-                && child.GetComponents<Component>().All(c => c is Transform || c == component);
+            return generated && RimeEmoFaceMenu.OnlyOwnParts(child, component);
         }
         // selectResult: the Gesture page shows the new object; quick re-applies from the top bar keep the user's selection.
         internal static void Apply(RimeEmoProject project, GameObject avatar, bool selectResult = true)
         {
             var errors = Validate(project, avatar);
             if (errors.Count != 0) throw new InvalidOperationException(string.Join("\n", errors));
-            var controller = RimeEmoBuild.Build(project);
+            var controller = RimeEmoBuild.Build(project, avatar);
             Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup(); Undo.SetCurrentGroupName("RimeEmo: Apply FX");
             try
             {
@@ -131,6 +131,7 @@ namespace RimeEmo.Editor
                 }
                 serialized.ApplyModifiedProperties();
             }
+            RimeEmoFaceMenu.Apply(child, project);
             Undo.CollapseUndoOperations(group); EditorSceneManager.MarkSceneDirty(avatar.scene); if (selectResult) Selection.activeGameObject = child;
             }
             catch { Undo.RevertAllDownToGroup(group); throw; }

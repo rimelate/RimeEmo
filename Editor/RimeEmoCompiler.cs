@@ -40,24 +40,48 @@ namespace RimeEmo.Editor
             if (motion.tracks.GroupBy(t => t.part).Any(g => g.Count() > 1)) throw new InvalidOperationException(RimeEmoLocalization.T("同一パーツのトラックが重複しています。"));
             var bindings = new List<EditorCurveBinding>(); var curves = new List<AnimationCurve>();
             float duration = Duration(motion);
-            foreach (var shape in RimeEmoFace.Shapes(motion.project))
+            sourceCurves = new Dictionary<(AnimationClip, string, string), AnimationCurve>();
+            try
             {
-                var track = motion.tracks.FirstOrDefault(t => t.part == shape.part);
-                if (motion.sourceClip && RimeEmoQueueCurves.SourceCurve(motion.sourceClip, shape) == null
-                    && (track == null || track.states.All(s => s.animated))) continue;
-                AnimationCurve curve;
-                if (track == null || track.states.Count == 0) curve = AnimationCurve.Constant(0, duration, shape.defaultValue);
-                else if (track.states.Any(s => s.animated)) curve = Temporal(shape, track, duration);
-                else curve = Static(shape, track, duration);
-                bindings.Add(RimeEmoClips.Binding(shape)); curves.Add(curve);
+                foreach (var shape in RimeEmoFace.Shapes(motion.project))
+                {
+                    var track = motion.tracks.FirstOrDefault(t => t.part == shape.part);
+                    if (motion.sourceClip && SourceCurve(motion.sourceClip, shape) == null
+                        && (track == null || track.states.All(s => s.animated))) continue;
+                    AnimationCurve curve;
+                    if (track == null || track.states.Count == 0) curve = AnimationCurve.Constant(0, duration, shape.defaultValue);
+                    else if (track.states.Any(s => s.animated)) curve = Temporal(shape, track, duration);
+                    else curve = Static(shape, track, duration);
+                    bindings.Add(RimeEmoClips.Binding(shape)); curves.Add(curve);
+                }
             }
+            finally { sourceCurves = null; }
             resultBindings = bindings.ToArray(); resultCurves = curves.ToArray();
+        }
+
+        // One compile reads the same source curve for every block and transition, and GetEditorCurve copies the
+        // whole curve each time. The cached curves are only read; Temporal copies one before returning it.
+        private static Dictionary<(AnimationClip, string, string), AnimationCurve> sourceCurves;
+
+        private static AnimationCurve SourceCurve(AnimationClip clip, ShapeEntry shape)
+        {
+            if (!clip || sourceCurves == null) return RimeEmoQueueCurves.SourceCurve(clip, shape);
+            var key = (clip, shape.path, shape.shape);
+            if (!sourceCurves.TryGetValue(key, out var curve)) sourceCurves[key] = curve = RimeEmoQueueCurves.SourceCurve(clip, shape);
+            return curve;
+        }
+
+        // RimeEmoClips.Value through the compile's curve cache.
+        private static float ClipValue(AnimationClip clip, ShapeEntry shape)
+        {
+            var curve = SourceCurve(clip, shape);
+            return curve == null || curve.length == 0 ? shape.defaultValue : curve.Evaluate(0);
         }
 
         private static float Value(MotionState state, ShapeEntry shape, float localTime)
         {
-            if (!state.animated) return RimeEmoClips.Value(state.clip, shape);
-            var curve = RimeEmoQueueCurves.SourceCurve(state.clip, shape);
+            if (!state.animated) return ClipValue(state.clip, shape);
+            var curve = SourceCurve(state.clip, shape);
             return curve == null ? shape.defaultValue : curve.Evaluate(state.sourceStart + localTime * Mathf.Max(.000001f, state.speed));
         }
         private static AnimationCurve Temporal(ShapeEntry shape, PartTrack track, float duration)
@@ -81,7 +105,7 @@ namespace RimeEmo.Editor
                         || Mathf.Abs(next.sourceStart - (state.sourceStart + hold * state.speed)) > .000001f) break;
                     hold += Mathf.Max(0, next.hold); last++;
                 }
-                var source = state.animated ? RimeEmoQueueCurves.SourceCurve(state.clip, shape) : null;
+                var source = state.animated ? SourceCurve(state.clip, shape) : null;
                 if (source != null)
                 {
                     if (i == 0 && last == track.states.Count - 1 && time == 0 && state.sourceStart == 0 && state.speed == 1
@@ -130,13 +154,13 @@ namespace RimeEmo.Editor
         private static AnimationCurve Static(ShapeEntry shape, PartTrack track, float duration)
         {
             var keys = new List<Keyframe>(); float time = Mathf.Max(0, track.startTime);
-            Add(keys, 0, RimeEmoClips.Value(track.states[0].clip, shape));
+            Add(keys, 0, ClipValue(track.states[0].clip, shape));
             for (int i = 0; i < track.states.Count; i++)
             {
-                var state = track.states[i]; float from = RimeEmoClips.Value(state.clip, shape);
+                var state = track.states[i]; float from = ClipValue(state.clip, shape);
                 time += Mathf.Max(0, state.hold) + Mathf.Max(0, state.endHold); Add(keys, time, from);
                 if (i + 1 == track.states.Count) continue;
-                float to = RimeEmoClips.Value(track.states[i + 1].clip, shape), dt = Mathf.Max(0, state.transition);
+                float to = ClipValue(track.states[i + 1].clip, shape), dt = Mathf.Max(0, state.transition);
                 if (dt == 0) { if (keys.Count > 1) SetOut(keys, keys.Count - 2, float.PositiveInfinity); Add(keys, time, to); continue; }
                 float slope = state.interpolation == Interpolation.Linear ? (to - from) / dt : state.interpolation == Interpolation.Step ? float.PositiveInfinity : 0;
                 SetOut(keys, keys.Count - 1, slope); time += dt; keys.Add(new Keyframe(time, to, slope, 0));

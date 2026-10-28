@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -16,7 +16,8 @@ namespace RimeEmo.Editor
         internal const string LayerName = "RimeEmo Gestures";
         // Bump when the generated content changes for the same settings, so applied avatars show "変更を適用".
         // 2: layer appended via MA instead of a copied FX. 3: only Shape Keys changed from Default Face are written.
-        internal const int GeneratorVersion = 3;
+        // 4: face lock, menu expressions and per-expression blink / lip sync pauses.
+        internal const int GeneratorVersion = 5;
 
         internal static IEnumerable<AnimatorState> States(AnimatorStateMachine machine)
         {
@@ -35,6 +36,7 @@ namespace RimeEmo.Editor
                 foreach (string name in new[] { "GestureLeft", "GestureRight" })
                     if (source.parameters.Any(p => p.name == name && p.type != AnimatorControllerParameterType.Int)) errors.Add(name + RimeEmoLocalization.T("がInt以外で定義されています。"));
             if (float.IsNaN(project.gestureBlendSeconds) || float.IsInfinity(project.gestureBlendSeconds) || project.gestureBlendSeconds < 0) errors.Add(RimeEmoLocalization.T("Gestureの切替時間が不正です。"));
+            errors.AddRange(RimeEmoFaceMenu.ValidateBuild(project));
             return errors;
         }
 
@@ -47,11 +49,13 @@ namespace RimeEmo.Editor
 
         // Rebuilds the controller in place: the asset keeps its path and GUID, so the scene's MA Merge Animator
         // never needs to change and no folders pile up.
-        internal static AnimatorController Build(RimeEmoProject project)
+        // The avatar tells how it blinks and lip-syncs; without one, the settings' scene avatar is looked up.
+        internal static AnimatorController Build(RimeEmoProject project, GameObject avatar = null)
         {
             var errors = Validate(project);
             if (errors.Count != 0) throw new InvalidOperationException(string.Join("\n", errors));
-            string fingerprint = RimeEmoBuildState.Fingerprint(project);
+            var sync = RimeEmoFaceSync.Analyze(project, avatar);
+            string fingerprint = RimeEmoBuildState.Fingerprint(project, sync);
             string folder = OutputFolder(project);
             RimeEmoAssets.Folder(RimeEmoAssets.GeneratedRoot); RimeEmoAssets.Folder(folder);
             string path = folder + "/" + ControllerFile;
@@ -62,28 +66,65 @@ namespace RimeEmo.Editor
 
             controller.AddParameter("GestureLeft", AnimatorControllerParameterType.Int);
             controller.AddParameter("GestureRight", AnimatorControllerParameterType.Int);
+            bool menu = project.expressionMenu;
+            if (menu)
+            {
+                controller.AddParameter(RimeEmoFaceMenu.LockParameter, AnimatorControllerParameterType.Bool);
+                controller.AddParameter(RimeEmoFaceMenu.FaceParameter, AnimatorControllerParameterType.Int);
+            }
             var sm = new AnimatorStateMachine { name = LayerName, hideFlags = HideFlags.HideInHierarchy };
             AssetDatabase.AddObjectToAsset(sm, controller);
             controller.AddLayer(new AnimatorControllerLayer { name = LayerName, stateMachine = sm, defaultWeight = 1, blendingMode = AnimatorLayerBlendingMode.Override });
-            var sources = Sources(project, out var keys);
+            var sources = Sources(project, out var keys, out var menuKeys);
+            TrackingSetting Setting(Object key) => key ? RimeEmoFaceMenu.Tracking(project, RimeEmoFaceMenu.MaterialClip(key)) : null;
+            // An avatar that blinks in its FX blinks in every expression that does not pause it, Default Face included.
+            foreach (var pair in sources)
+                if (Setting(pair.Key)?.stopBlink == true) sync.RemoveBlink(pair.Value.clip);
+                else sync.AddBlink(pair.Value.clip);
+            var defaultFace = RimeEmoClips.DefaultClip(project);
+            sync.AddBlink(defaultFace);
             var written = WrittenShapes(project, sources);
+            if (sync.AnimatedBlink) written.UnionWith(sync.BlinkShapes);
             if (project.overrideSourceGestureFaces) written.UnionWith(SourceGestureShapes(project));
-            var clips = sources.ToDictionary(p => p.Key, p => SaveClip(Restrict(p.Value.clip, project, written), controller, p.Key.name));
-            AnimationClip defaults = SaveClip(Restrict(RimeEmoClips.DefaultClip(project), project, written), controller, "Default Face");
-            for (int l = 0; l < 8; l++) for (int r = 0; r < 8; r++)
+            // Lip sync driven by the FX stays with its own layers; only a state that pauses it writes those keys.
+            if (sync.AnimatedLipSync) written.ExceptWith(sync.lipShapes);
+            AnimationClip Finish(Object key, AnimationClip clip)
             {
-                var key = keys[l, r];
-                var clip = key ? clips[key] : defaults;
-                var state = sm.AddState("L" + l + " R" + r, new Vector3(r * 200, l * 65, 0));
-                state.motion = clip;
-                if (l == 0 && r == 0) sm.defaultState = state;
+                Restrict(clip, project, written);
+                if (Setting(key)?.stopLipSync == true) sync.PauseLipSync(clip);
+                return SaveClip(clip, controller, key ? key.name : "Default Face");
+            }
+            var clips = sources.ToDictionary(p => p.Key, p => Finish(p.Key, p.Value.clip));
+            AnimationClip defaults = Finish(null, defaultFace);
+            // VRChat's blinking or lip sync is handed back in every state once some built expression pauses it.
+            var pausing = sources.Keys.Select(Setting).Where(t => t != null).ToList();
+            bool eyes = sync.vrcBlink && pausing.Any(t => t.stopBlink), mouth = sync.vrcLipSync && pausing.Any(t => t.stopLipSync);
+            AnimatorStateTransition AddState(string name, Object key, Vector3 position)
+            {
+                var state = sm.AddState(name, position);
+                state.motion = key ? clips[key] : defaults;
+                var setting = Setting(key);
+                RimeEmoFaceMenu.AddTrackingControl(state, eyes ? setting != null && setting.stopBlink : (bool?)null, mouth ? setting != null && setting.stopLipSync : (bool?)null);
+                if (!sm.defaultState) sm.defaultState = state; // The first one: L0 R0, both hands resting.
                 var transition = sm.AddAnyStateTransition(state);
                 transition.hasExitTime = false; transition.hasFixedDuration = true; transition.duration = project.gestureBlendSeconds;
                 transition.canTransitionToSelf = false; transition.interruptionSource = TransitionInterruptionSource.SourceThenDestination;
                 transition.orderedInterruption = false;
+                return transition;
+            }
+            for (int l = 0; l < 8; l++) for (int r = 0; r < 8; r++)
+            {
+                var transition = AddState("L" + l + " R" + r, keys[l, r], new Vector3(r * 200, l * 65, 0));
                 transition.AddCondition(AnimatorConditionMode.Equals, l, "GestureLeft");
                 transition.AddCondition(AnimatorConditionMode.Equals, r, "GestureRight");
+                // The hands only steer the face while it is not locked and no menu expression is chosen. Locking simply
+                // stops these transitions, so the face shown at that moment stays.
+                if (!menu) continue;
+                transition.AddCondition(AnimatorConditionMode.IfNot, 0, RimeEmoFaceMenu.LockParameter);
+                transition.AddCondition(AnimatorConditionMode.Equals, 0, RimeEmoFaceMenu.FaceParameter);
             }
+            for (int i = 0; i < menuKeys.Count; i++)
+                AddState("Menu " + (i + 1), menuKeys[i], new Vector3(-300, i * 65, 0)).AddCondition(AnimatorConditionMode.Equals, i + 1, RimeEmoFaceMenu.FaceParameter);
             EditorUtility.SetDirty(controller); AssetDatabase.SaveAssets();
             Undo.RecordObject(project, "RimeEmo: Rebuild FX");
             project.generatedFX = controller; project.generatedFolder = folder; project.generatedFingerprint = fingerprint;
@@ -93,23 +134,32 @@ namespace RimeEmo.Editor
 
         internal struct SourceClip { internal AnimationClip clip; internal bool compiled; }
 
-        // The clip of every assigned expression or motion, once each, and which one each of the 64 states plays.
-        // Clips are new in-memory objects; the caller saves or destroys them.
-        internal static Dictionary<Object, SourceClip> Sources(RimeEmoProject project, out Object[,] keys)
+        internal static Dictionary<Object, SourceClip> Sources(RimeEmoProject project, out Object[,] keys) => Sources(project, out keys, out _);
+
+        // The clip of every assigned expression or motion and every menu expression, once each, which one each of the
+        // 64 states plays, and the menu's expressions in order. Clips are new in-memory objects; the caller saves or
+        // destroys them.
+        internal static Dictionary<Object, SourceClip> Sources(RimeEmoProject project, out Object[,] keys, out List<Object> menuKeys)
         {
             var sources = new Dictionary<Object, SourceClip>();
+            void Add(Object key, AnimationClip clip, RimeEmoMotion motion)
+            {
+                if (!key || sources.ContainsKey(key)) return;
+                var dynamicSource = motion ? motion : RimeEmoDynamicClips.Find(project, clip);
+                sources[key] = dynamicSource
+                    ? new SourceClip { clip = RimeEmoCompiler.Compile(dynamicSource), compiled = true }
+                    : new SourceClip { clip = Copy(clip) };
+            }
             keys = new Object[8, 8];
             for (int l = 0; l < 8; l++) for (int r = 0; r < 8; r++)
             {
                 RimeEmoAssignments.TryResolve(project, l, r, out var rule);
                 Object key = rule == null ? null : rule.motion ? (Object)rule.motion : rule.clip;
                 keys[l, r] = key;
-                if (!key || sources.ContainsKey(key)) continue;
-                var dynamicSource = rule.motion ? rule.motion : RimeEmoDynamicClips.Find(project, rule.clip);
-                sources[key] = dynamicSource
-                    ? new SourceClip { clip = RimeEmoCompiler.Compile(dynamicSource), compiled = true }
-                    : new SourceClip { clip = Copy(rule.clip) };
+                if (key) Add(key, rule.clip, rule.motion);
             }
+            menuKeys = RimeEmoFaceMenu.MenuClips(project).Cast<Object>().ToList();
+            foreach (AnimationClip clip in menuKeys) Add(clip, clip, null);
             return sources;
         }
 
@@ -158,12 +208,10 @@ namespace RimeEmo.Editor
         internal static HashSet<string> SourceGestureShapes(RimeEmoProject project)
         {
             var result = new HashSet<string>();
-            if (!project || !(project.sourceFX is AnimatorController fx)) return result;
+            if (!project || !(project.sourceFX is AnimatorController)) return result;
             string face = RimeEmoFace.Path(project);
             var defaults = RimeEmoFace.Shapes(project).GroupBy(s => s.shape).ToDictionary(g => g.Key, g => g.First().defaultValue);
-            var states = new HashSet<AnimatorState>(); var trees = new List<Motion>();
-            foreach (var layer in fx.layers) if (layer.stateMachine) CollectGestureStates(layer.stateMachine, states, trees);
-            foreach (var clip in states.SelectMany(s => Clips(s.motion)).Concat(trees.SelectMany(Clips)).Distinct())
+            foreach (var clip in SourceGestureClips(project))
                 foreach (var binding in AnimationUtility.GetCurveBindings(clip))
                 {
                     if (!RimeEmoClips.IsShape(binding) || binding.path != face) continue;
@@ -175,14 +223,25 @@ namespace RimeEmo.Editor
             return result;
         }
 
+        // The clips the source FX shows for a hand shape: what its hand-gesture states and gesture-weight Blend Trees play.
+        internal static HashSet<AnimationClip> SourceGestureClips(RimeEmoProject project)
+        {
+            var states = new HashSet<AnimatorState>(); var trees = new List<Motion>();
+            if (project && project.sourceFX is AnimatorController fx) foreach (var layer in fx.layers) if (layer.stateMachine) CollectGestureStates(layer.stateMachine, states, trees);
+            return new HashSet<AnimationClip>(states.SelectMany(s => Clips(s.motion)).Concat(trees.SelectMany(Clips)).Where(c => c));
+        }
+
         // Source gesture Shape Keys that RimeEmo does not write: where the old expression can still show through.
         internal static List<string> LeakingShapes(RimeEmoProject project)
         {
+            // Compiling every assignment and menu expression is the expensive part; most source FXs leave nothing to check.
+            var sourceShapes = SourceGestureShapes(project);
+            if (sourceShapes.Count == 0) return new List<string>();
             var sources = Sources(project, out _);
             try
             {
                 var written = WrittenShapes(project, sources);
-                return SourceGestureShapes(project).Where(s => !written.Contains(s)).OrderBy(s => s, StringComparer.Ordinal).ToList();
+                return sourceShapes.Where(s => !written.Contains(s)).OrderBy(s => s, StringComparer.Ordinal).ToList();
             }
             finally { foreach (var source in sources.Values) if (source.clip) Object.DestroyImmediate(source.clip); }
         }
@@ -220,7 +279,7 @@ namespace RimeEmo.Editor
             => motion is BlendTree tree && (GestureParameters.Contains(tree.blendParameter) || GestureParameters.Contains(tree.blendParameterY)
                 || tree.children.Any(c => TreeUsesGesture(c.motion)));
 
-        private static IEnumerable<AnimationClip> Clips(Motion motion)
+        internal static IEnumerable<AnimationClip> Clips(Motion motion)
         {
             if (motion is AnimationClip clip) { yield return clip; yield break; }
             if (motion is BlendTree tree) foreach (var child in tree.children) foreach (var nested in Clips(child.motion)) yield return nested;

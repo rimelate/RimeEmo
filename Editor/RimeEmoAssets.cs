@@ -182,26 +182,98 @@ namespace RimeEmo.Editor
     {
         internal static readonly string[] Names = { "Neutral", "Fist", "HandOpen", "FingerPoint", "Victory", "RockNRoll", "HandGun", "ThumbsUp" };
 
-        // Deliberately report only simple direct root transitions. Never infer from filenames.
+        // Read from the transition conditions only. Never infer from filenames.
         internal static string Describe(RuntimeAnimatorController source, AnimationClip clip)
         {
             var controller = source as AnimatorController;
-            if (!controller) return "Unknown";
-            var results = new List<string>();
-            foreach (var layer in controller.layers)
+            if (!controller || !clip) return "Unknown";
+            string Hand(int index) => index < 0 ? "" : Names[index];
+            var results = SourceRules(controller, out _).Where(r => r.clip == clip)
+                .Select(r => r.left >= 0 && r.right >= 0 ? "Left: " + Hand(r.left) + " + Right: " + Hand(r.right) : r.left >= 0 ? "Left: " + Hand(r.left) : "Right: " + Hand(r.right))
+                .Distinct().ToList();
+            return results.Count == 0 ? "Unknown" : string.Join(" / ", results) + " (直接条件・参考)";
+        }
+
+        internal struct SourceRule { internal int left, right; internal AnimationClip clip; }
+
+        // The hand-gesture expressions of a source FX. Avatars build them in many shapes: AnyState transitions, one
+        // layer per hand, Entry transitions, state-to-state transitions, sub-state machines, and a Blend Tree on the
+        // gesture weight for the fist. Every transition, at any depth, that selects "GestureLeft/Right equals n"
+        // counts; it leads to a clip, or to a weight Blend Tree whose fully pressed clip is taken.
+        // Other conditions on the transition must hold with every parameter at its default: hand layers are often gated
+        // by a face lock or a menu mode that is off by default (mao: FaceLock < 0.5, anima: setudan_global off), and
+        // that is the face the avatar shows. A gimmick that needs a toggle turned on (MAYO: eyes that change on a hand
+        // shape only while Jelly_Eye is on) is counted in "conditional" instead: it would clash with the hand
+        // layer's own expression for the same hand shape.
+        internal static List<SourceRule> SourceRules(AnimatorController controller, out int conditional)
+        {
+            var rules = new List<SourceRule>();
+            int skipped = 0;
+            // Parameters an FX uses without declaring them (VRChat's AFK, InStation…) are 0 until VRChat sets them.
+            var defaults = (controller ? controller.parameters : Array.Empty<AnimatorControllerParameter>()).GroupBy(p => p.name).ToDictionary(g => g.Key, g =>
             {
-                var sm = layer.stateMachine;
-                foreach (var transition in sm.anyStateTransitions.Concat(sm.states.SelectMany(s => s.state.transitions)))
+                var p = g.First();
+                return p.type == AnimatorControllerParameterType.Float ? p.defaultFloat : p.type == AnimatorControllerParameterType.Int ? p.defaultInt : p.defaultBool ? 1f : 0f;
+            });
+            bool AtDefault(AnimatorCondition c)
+            {
+                defaults.TryGetValue(c.parameter, out float value);
+                switch (c.mode)
                 {
-                    if (!transition.destinationState || transition.destinationState.motion != clip) continue;
-                    var conditions = transition.conditions;
-                    if (transition.hasExitTime || conditions.Length == 0 || conditions.Any(c =>
-                        (c.parameter != "GestureLeft" && c.parameter != "GestureRight") || c.mode != AnimatorConditionMode.Equals ||
-                        c.threshold < 0 || c.threshold > 7 || c.threshold != Mathf.Floor(c.threshold))) continue;
-                    results.Add(string.Join(" + ", conditions.Select(c => (c.parameter == "GestureLeft" ? "Left: " : "Right: ") + Names[(int)c.threshold])));
+                    case AnimatorConditionMode.If: return value != 0;
+                    case AnimatorConditionMode.IfNot: return value == 0;
+                    case AnimatorConditionMode.Greater: return value > c.threshold;
+                    case AnimatorConditionMode.Less: return value < c.threshold;
+                    case AnimatorConditionMode.Equals: return value == c.threshold;
+                    case AnimatorConditionMode.NotEqual: return value != c.threshold;
+                    default: return false;
                 }
             }
-            return results.Count == 0 ? "Unknown" : string.Join(" / ", results.Distinct()) + " (直接条件・参考)";
+            void Transitions(IEnumerable<AnimatorTransitionBase> transitions)
+            {
+                foreach (var transition in transitions)
+                {
+                    if (!transition) continue;
+                    var conditions = transition.conditions;
+                    var hands = conditions.Where(c => c.parameter == "GestureLeft" || c.parameter == "GestureRight").ToArray();
+                    // "While this hand shape is NOT made" gates a layer rather than choosing an expression.
+                    if (hands.Length == 0 || hands.Any(c => c.mode != AnimatorConditionMode.Equals || c.threshold < 0 || c.threshold > 7 || c.threshold != Mathf.Floor(c.threshold))) continue;
+                    if (hands.GroupBy(c => c.parameter).Any(g => g.Select(c => c.threshold).Distinct().Count() > 1)) continue;
+                    if (!conditions.Except(hands).All(AtDefault)) { skipped++; continue; }
+                    var state = transition.destinationState ? transition.destinationState
+                        : transition.destinationStateMachine ? transition.destinationStateMachine.defaultState : null;
+                    var clip = state ? PressedClip(state.motion) : null;
+                    if (!clip) continue;
+                    int left = hands.Where(c => c.parameter == "GestureLeft").Select(c => (int)c.threshold).DefaultIfEmpty(-1).First();
+                    int right = hands.Where(c => c.parameter == "GestureRight").Select(c => (int)c.threshold).DefaultIfEmpty(-1).First();
+                    if (!rules.Any(r => r.left == left && r.right == right && r.clip == clip)) rules.Add(new SourceRule { left = left, right = right, clip = clip });
+                }
+            }
+            void Machine(AnimatorStateMachine machine)
+            {
+                if (!machine) return;
+                Transitions(machine.anyStateTransitions); Transitions(machine.entryTransitions);
+                foreach (var child in machine.states) if (child.state) Transitions(child.state.transitions);
+                foreach (var child in machine.stateMachines)
+                {
+                    if (!child.stateMachine) continue;
+                    Transitions(machine.GetStateMachineTransitions(child.stateMachine));
+                    Machine(child.stateMachine);
+                }
+            }
+            if (controller) foreach (var layer in controller.layers) Machine(layer.stateMachine);
+            conditional = skipped;
+            return rules;
+        }
+
+        // A fist that follows the trigger is a Blend Tree from the resting face to the clenched one; the expression is the
+        // clenched end. Other Blend Trees mix several faces and have no single expression.
+        private static AnimationClip PressedClip(Motion motion)
+        {
+            if (motion is AnimationClip clip) return clip;
+            if (!(motion is BlendTree tree) || tree.blendType != BlendTreeType.Simple1D || tree.children.Length == 0
+                || (tree.blendParameter != "GestureLeftWeight" && tree.blendParameter != "GestureRightWeight")) return null;
+            return PressedClip(tree.children.OrderByDescending(c => c.threshold).First().motion);
         }
     }
 }

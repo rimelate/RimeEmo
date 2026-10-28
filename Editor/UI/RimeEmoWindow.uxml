@@ -73,6 +73,8 @@
             <ui:VisualElement name="motion-toolbar" class="re-row">
               <ui:TextField name="motion-name" label="名前" class="re-grow" />
               <ui:Toggle name="loop" label="ループ" />
+              <ui:Toggle name="motion-stop-blink" text="まばたき停止" tooltip="この動きの間、VRChatの自動まばたき（視線の動きも）を止めます。目を閉じる動きなどに使います。保存した動きで設定できます。" />
+              <ui:Toggle name="motion-stop-lipsync" text="口パク停止" tooltip="この動きの間、リップシンク（口パク）を止めます。口の形を保ちたい動きに使います。保存した動きで設定できます。" />
               <ui:Button name="new-motion" text="＋ 新しい動き" class="re-button re-button--tonal" />
               <ui:Button name="save-as" text="別名で保存" class="re-button re-button--text" />
             </ui:VisualElement>
@@ -114,6 +116,10 @@
               <ui:TextField name="shape-search" label="Shape Key検索" class="re-grow re-search" />
             </ui:VisualElement>
             <ui:Label name="static-notice" class="re-hint" />
+            <ui:VisualElement name="static-tracking" class="re-row re-wrap">
+              <ui:Toggle name="static-stop-blink" text="まばたき停止" tooltip="この表情の間、VRChatの自動まばたき（視線の動きも）を止めます。目を閉じる表情などに使います。" />
+              <ui:Toggle name="static-stop-lipsync" text="口パク停止" tooltip="この表情の間、リップシンク（口パク）を止めます。口の形を保ちたい表情に使います。" />
+            </ui:VisualElement>
             <ui:VisualElement name="default-face-actions" class="re-row re-wrap" style="display: none;">
               <ui:Button name="default-face-capture" text="シーンの表情を読み込む" tooltip="今のシーンのアバターの顔を、Default Faceとして取り込みます" class="re-button re-button--tonal" />
               <ui:Button name="default-face-from-clip" text="アニメーションをシーンに書き出す…" tooltip="選んだアニメーションの顔をシーンのアバターに書き込み、Default Faceにします" class="re-button re-button--text" />
@@ -190,7 +196,7 @@
               <ui:Label text="お問い合わせ" class="re-title" />
               <ui:VisualElement class="re-row re-wrap">
                 <ui:Label text="不具合報告・お問い合わせは、BOOTHのショップメッセージからお願いします。" class="re-hint re-grow" />
-                <ui:Button name="support-contact" text="問い合わせはこちら" tooltip="https://rimerime.booth.pm/" class="re-button re-button--filled" />
+                <ui:Button name="support-contact" text="BOOTHで問い合わせる" tooltip="https://rimerime.booth.pm/" class="re-button re-button--tonal" />
               </ui:VisualElement>
             </ui:VisualElement>
           </ui:ScrollView>

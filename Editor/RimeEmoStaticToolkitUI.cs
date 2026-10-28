@@ -152,7 +152,7 @@ namespace RimeEmo.Editor
                     else if (EditingDefaultFace) SetDefaultFaceValue(data.binding, e.newValue);
                     else RimeEmoClips.Set(selected, data.binding, e.newValue);
                     data.value = e.newValue;
-                    row.EnableInClassList("is-default", data.included && Mathf.Abs(data.value - data.shape.defaultValue) < 0.0001f);
+                    MarkShapeRow(row, data);
                     RequestToolkitPreview(staticAdjusting);
                 });
                 var flatten = new Button(() =>
@@ -178,8 +178,7 @@ namespace RimeEmo.Editor
                 row.Q<Label>("shape-label").text = data.shape.shape;
                 row.tooltip = data.shape.shape + "\nDefault: " + data.shape.defaultValue + "\n" + data.shape.path
                     + (data.included ? "" : "\n" + RimeEmoLocalization.T("このClipには含まれていません。値を動かすと追加します。"));
-                row.EnableInClassList("is-unset", !data.included);
-                row.EnableInClassList("is-default", data.included && data.constant && Mathf.Abs(data.value - data.shape.defaultValue) < 0.0001f);
+                MarkShapeRow(row, data);
                 var slider = row.Q<Slider>("shape-value"); slider.lowValue = Mathf.Min(0, data.value); slider.highValue = Mathf.Max(100, data.value); slider.SetValueWithoutNotify(data.value);
                 var number = row.Q<FloatField>("shape-number"); number.SetValueWithoutNotify(data.value);
                 row.userData = data;
@@ -193,6 +192,17 @@ namespace RimeEmo.Editor
                 change.tooltip = RimeEmoLocalization.T(data.included ? "このClipから外す（Default Faceの値に戻ります）" : "Default Faceの値でこのClipに追加");
             };
         }
+        // Row colour by what the clip does with the Shape Key: strong when its value differs from Default Face or it
+        // moves, light when the clip only holds the Default Face value, none when it is not in the clip. Default Face
+        // holds every Shape Key, so there the strong colour marks the keys that have a value (not 0).
+        private void MarkShapeRow(VisualElement row, ShapeRow data)
+        {
+            bool changed = EditingDefaultFace ? Mathf.Abs(data.value) >= 0.0001f : data.Changed;
+            row.EnableInClassList("is-changed", changed);
+            row.EnableInClassList("is-included", !changed && data.included && !EditingDefaultFace);
+            row.EnableInClassList("is-unset", !data.included);
+        }
+
         // ListView's own "List is empty" is English only and does not say what to do next.
         private void RefreshShapeEmpty()
         {
@@ -230,6 +240,7 @@ namespace RimeEmo.Editor
             UI<Slider>("static-time").style.display = RimeEmoImportedClips.IsAnimated(selected, project) ? DisplayStyle.Flex : DisplayStyle.None;
             var slider = UI<Slider>("static-time"); slider.highValue = selected ? Mathf.Max(1f / 60, selected.length) : 1; time = Mathf.Clamp(time, 0, slider.highValue); slider.SetValueWithoutNotify(time);
             RefreshDefaultFace();
+            RefreshTracking();
             RequestToolkitPreview();
         }
     }

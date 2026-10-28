@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,20 +16,26 @@ namespace RimeEmo.Editor
         // Measured from the font, so the label is never clipped (a fixed 62px cut it to "RimeEmc").
         private static float buttonWidth;
         private static readonly GUIContent ButtonContent = new GUIContent("RimeEmo", "Open RimeEmo for this avatar");
+        // Every visible row is drawn on each repaint; walking up a deep bone chain each time was wasted work.
+        private static readonly Dictionary<int, bool> isRootRow = new Dictionary<int, bool>();
 
         static RimeEmoHierarchy()
         {
             EditorApplication.hierarchyWindowItemOnGUI += DrawItem;
+            EditorApplication.hierarchyChanged += isRootRow.Clear;
         }
 
         private static void DrawItem(int instanceId, Rect selectionRect)
         {
-            var item = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
-            if (!item || EditorUtility.IsPersistent(item) || !item.scene.IsValid()) return;
-
-            // Only draw once, on the resolved avatar root rather than every child row.
-            var avatar = ResolveAvatarRoot(item);
-            if (avatar != item) return;
+            if (!isRootRow.TryGetValue(instanceId, out bool root))
+            {
+                var row = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
+                // Only draw once, on the resolved avatar root rather than every child row.
+                isRootRow[instanceId] = root = row && ResolveAvatarRoot(row) == row;
+            }
+            if (!root) return;
+            var avatar = EditorUtility.InstanceIDToObject(instanceId) as GameObject;
+            if (!avatar) return;
 
             if (buttonWidth <= 0) buttonWidth = Mathf.Ceil(EditorStyles.miniButton.CalcSize(ButtonContent).x) + 4f;
             var buttonRect = new Rect(

@@ -14,7 +14,7 @@
    <ui:VisualElement class="re-card">
     <ui:VisualElement class="re-row">
      <ui:Label text="1. 手の形に割り当てる" class="re-title re-grow"/>
-     <ui:Button name="rules-import" text="元FXから取り込む" tooltip="元FXの単純なAnyStateのGesture条件を取り込みます" class="re-button re-button--text"/>
+     <ui:Button name="rules-import" text="元FXから取り込む" tooltip="元FXで手の形だけを条件に切り替わる表情を取り込みます。素材にまだないClipは素材にも取り込みます。割り当て済みの手の形は変えません。" class="re-button re-button--text"/>
     </ui:VisualElement>
     <ui:Label text="手の形ごとに、素材一覧やProjectから表情・動きをドロップします。空欄の手の形はDefault Faceになります。" class="re-hint"/>
     <ui:VisualElement class="re-hands">
@@ -64,6 +64,7 @@
     <ui:Label name="apply-state" class="re-hint"/>
     <ui:Label name="source-gesture-hint" class="re-hint"/>
     <ui:Toggle name="source-gesture-override" text="元FXの手の表情を止める（これらのShape KeyもRimeEmoが書き込む）"/>
+    <ui:Toggle name="expression-menu" text="Expressions Menuに「表情」を追加する（表情固定と、素材の表情を選ぶメニュー）" tooltip="Bool 1つとInt 1つ（同期9bit）を使います。どちらも保存されず、アバターを読み込むたびに手の形の表情から始まります。"/>
     <ui:VisualElement class="re-row re-wrap">
      <ui:Button name="fx-apply" text="再生成して適用" tooltip="FXを再生成して、Sceneのアバターへ適用します" class="re-button re-button--filled"/>
      <ui:Button name="fx-inspect" text="生成FXを選択" class="re-button re-button--text"/>
@@ -75,7 +76,7 @@
     <ui:Label name="gesture-status" class="re-hint"/>
     <ui:Label name="build-errors" class="re-hint re-error"/>
     <ui:Label name="build-summary" class="re-hint"/>
-    <ui:Label text="生成するFXは、RimeEmoのGestureレイヤー1枚だけです。アバター自身のFXはそのまま残し、MA Merge Animator（追加）で一番上に重ねます。書き込むのは、RimeEmoの表情がDefault Faceから変えるShape Keyだけで、それ以外（リップシンクやまばたきなど）はアバターのFXのまま動きます。" class="re-hint"/>
+    <ui:Label text="生成するFXは、RimeEmoのGestureレイヤー1枚だけです。アバター自身のFXはそのまま残し、MA Merge Animator（追加）で一番上に重ねます。書き込むのは、RimeEmoの表情がDefault Faceから変えるShape Keyだけで、それ以外（リップシンクやまばたきなど）はアバターのFXのまま動きます。表情の間だけまばたき・口パクを止めたいときは、表情や動きの編集画面の「まばたき停止」「口パク停止」をオンにします。" class="re-hint"/>
     <ui:Label text="適用すると、アバターの子にMA Merge Animator付きのオブジェクトを置きます。FXは毎回同じファイルを上書きするので、適用を繰り返してもファイルは増えません。編集後は「再生成して適用」か、上部の「変更を適用」で反映してください。" class="re-hint"/>
    </ui:VisualElement>
   </ui:ScrollView>

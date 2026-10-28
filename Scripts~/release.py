@@ -22,12 +22,13 @@ UI_FILES = {
     "RimeEmoClassificationWindow.uxml", "RimeEmoTheme.uss", "RimeEmoCustom.uss",
     "Icons/ATTRIBUTION.txt", "Icons/LICENSE.txt",
     "Icons/Link-github.png", "Icons/Link-booth.png", "Icons/Link-x.png",
-    "Icons/MaterialIcons-Regular.codepoints.txt", "Icons/MaterialIcons-Regular.ttf",
     "Icons/MaterialSymbolsRounded-Fill-Subset.ttf",
     "Icons/MaterialSymbolsRounded-Subset.codepoints.txt",
     "Icons/MaterialSymbolsRounded-Subset.ttf",
 }
 ROOT_FILES = {"package.json", "README.md", "CHANGELOG.md"}
+# Development checks stay in the repository; users would only compile them.
+TEST_SOURCE = re.compile(r"Editor/(RimeEmo\w*Checks|RimeEmoSelfTests)\.cs")
 VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?")
 
 def version_parts(value):
@@ -61,6 +62,8 @@ def package_files(root):
             if not path.is_file() or path.suffix == ".meta":
                 continue
             rel = path.relative_to(root).as_posix()
+            if TEST_SOURCE.fullmatch(rel):
+                continue
             allowed = (path.parent == root / area and path.suffix in CODE_EXTENSIONS)
             if area == "Editor" and rel.startswith("Editor/UI/"):
                 allowed = rel[len("Editor/UI/"):] in UI_FILES

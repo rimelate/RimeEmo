@@ -35,6 +35,9 @@ namespace RimeEmo.Editor
                 root.panel.visualTree.style.width = 1000; root.panel.visualTree.style.height = 760;
                 root.style.width = 1000; root.style.height = 760;
                 var validate = root.panel.GetType().GetMethod("ValidateLayout", flags | BindingFlags.Public);
+                // Outside .re-app the theme colours did not resolve and the card was see-through over the preview.
+                validate.Invoke(root.panel, null);
+                Check(root.Q<VisualElement>("guide-card").resolvedStyle.backgroundColor.a > 0.99f, "guide card is see-through");
                 var expected = new[] { "language", "avatar", "static-mode", "dynamic-mode", "dynamic-mode", "save", "gesture-settings" };
                 for (int step = 0; step < expected.Length; step++)
                 {

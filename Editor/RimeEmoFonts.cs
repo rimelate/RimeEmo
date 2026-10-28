@@ -58,15 +58,15 @@ namespace RimeEmo.Editor
             roots.Add(new WeakReference<VisualElement>(root));
         }
 
-        // A fresh font for every open window; the old one is dropped after the windows have redrawn with the new one.
+        // A fresh font for every open window. The old one is left to the garbage collector, not destroyed: TextCore's
+        // atlas update queue still held it, and destroying it made every text in RimeEmo vanish ("Texture2D has been
+        // destroyed") until the next script reload.
         internal static void Renew()
         {
-            var old = font;
             font = null; searched = false;
             roots.RemoveAll(r => !r.TryGetTarget(out var e) || e.panel == null);
             foreach (var reference in roots.ToList())
                 if (reference.TryGetTarget(out var root)) { Apply(root); root.MarkDirtyRepaint(); }
-            if (old) EditorApplication.delayCall += () => Destroy(old);
         }
 
         private static FontAsset Create()
@@ -92,15 +92,5 @@ namespace RimeEmo.Editor
             catch (Exception) { return null; }
         }
 
-        private static void Destroy(FontAsset asset)
-        {
-            if (!asset) return;
-            foreach (var fallback in asset.fallbackFontAssetTable ?? new List<FontAsset>())
-                Destroy(fallback);
-            foreach (var texture in asset.atlasTextures ?? Array.Empty<Texture2D>())
-                if (texture) UnityEngine.Object.DestroyImmediate(texture);
-            if (asset.material) UnityEngine.Object.DestroyImmediate(asset.material);
-            UnityEngine.Object.DestroyImmediate(asset);
-        }
     }
 }

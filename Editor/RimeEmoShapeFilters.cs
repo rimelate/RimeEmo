@@ -81,6 +81,10 @@ namespace RimeEmo.Editor
                 var state = (ShapeState)i;
                 var button = new Button(() => SelectShapeState(state)) { name = "shape-state-" + i, tooltip = RimeEmoLocalization.T(ShapeStateTips[i]) };
                 button.AddToClassList("re-segment");
+                // Tinted like the rows it lists, so the colours in the list explain themselves. (A swatch element inside
+                // the button overlapped its text.)
+                if (state == ShapeState.Included) button.AddToClassList("re-legend-included");
+                if (state == ShapeState.Changed) button.AddToClassList("re-legend-changed");
                 host.Add(button);
             }
             UI<Button>("shape-filter-menu").clicked += ShowShapeFilterMenu;

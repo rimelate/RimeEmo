@@ -59,6 +59,14 @@ namespace RimeEmo.Editor
                 }
                 Check(root.Q<VisualElement>("preview-host").worldBound.height >= 80, "preview collapsed beneath its actions");
                 Check(root.Q<ListView>("material-list").worldBound.height >= 55, "material list collapsed beneath import controls");
+                // The Shape Key state filters show their whole label (a swatch inside a button once covered it).
+                for (int i = 0; i < 4; i++)
+                {
+                    var filter = root.Q<Button>("shape-state-" + i);
+                    if (filter == null || filter.worldBound.width <= 0) continue;
+                    var size = filter.MeasureTextSize(filter.text, 0, VisualElement.MeasureMode.Undefined, 0, VisualElement.MeasureMode.Undefined);
+                    Check(filter.childCount == 0 && size.x <= filter.contentRect.width + 1, "Shape Key filter label is cut off: " + filter.text);
+                }
                 RimeEmoLocalization.English = false;
                 Check(root.Q<Button>("dynamic-mode").text == "動き", "switch back to Japanese failed");
                 Check(RimeEmoLocalization.T("変更を保存しますか？") == "変更を保存しますか？", "Japanese dialog changed");

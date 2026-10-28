@@ -82,7 +82,9 @@ namespace RimeEmo.Editor
             var close = new Button(CloseGuide) { text = RimeEmoLocalization.T("閉じる") };
             foreach (var button in new[] { back, next, close }) { button.AddToClassList("re-button"); controls.Add(button); }
             guideCard.Add(controls);
-            toolkitRoot.Add(guideCard);
+            // Inside the .re-app element: the theme's colour variables are defined there, and outside it the card
+            // had no background and the preview showed through.
+            (UI<VisualElement>("dynamic-root") ?? toolkitRoot).Add(guideCard);
         }
 
         private void UpdateGuideHighlight()

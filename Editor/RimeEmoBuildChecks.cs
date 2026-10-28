@@ -14,7 +14,138 @@ namespace RimeEmo.Editor
         internal static void Run()
         {
             TestAssignments();
+            TestSourceRules();
+            TestFaceSync();
             TestBuildLayer();
+        }
+
+        // An avatar that blinks and lip-syncs in its FX, shaped like SiuSiu: the resting face is a looping clip with a
+        // blink in it, Talk Control reads Viseme and drives Talk, and the Talk layer plays the mouth while Talk is on.
+        static void TestFaceSync()
+        {
+            var project = ScriptableObject.CreateInstance<RimeEmoProject>();
+            var controller = new AnimatorController();
+            var made = new System.Collections.Generic.List<UnityEngine.Object> { project, controller };
+            T Make<T>(T o) where T : UnityEngine.Object { made.Add(o); return o; }
+            try
+            {
+                project.faceMeshSelected = true; project.faceMeshPath = "Face";
+                project.shapes.Add(new ShapeEntry { path = "Face", shape = "eye_blink", part = FacePart.LeftEye });
+                project.shapes.Add(new ShapeEntry { path = "Face", shape = "mouth_a", part = FacePart.Mouth });
+                project.shapes.Add(new ShapeEntry { path = "Face", shape = "smile", part = FacePart.Mouth });
+                EditorCurveBinding Shape(string name) => EditorCurveBinding.FloatCurve("Face", typeof(SkinnedMeshRenderer), "blendShape." + name);
+                project.sourceFX = controller;
+                controller.AddParameter("GestureLeft", AnimatorControllerParameterType.Int);
+                controller.AddParameter("Viseme", AnimatorControllerParameterType.Int);
+                controller.AddParameter("Talk", AnimatorControllerParameterType.Bool);
+                var idle = Make(new AnimationClip { name = "Idle" });
+                AnimationUtility.SetEditorCurve(idle, Shape("eye_blink"), new AnimationCurve(new Keyframe(0, 100), new Keyframe(.05f, 100), new Keyframe(.25f, 0), new Keyframe(3.95f, 0), new Keyframe(4, 20)));
+                var loop = AnimationUtility.GetAnimationClipSettings(idle); loop.loopTime = true; AnimationUtility.SetAnimationClipSettings(idle, loop);
+                controller.AddLayer("Hands");
+                var hands = controller.layers[0].stateMachine;
+                var rest = hands.AddState("Idle"); rest.motion = idle;
+                hands.AddAnyStateTransition(rest).AddCondition(AnimatorConditionMode.Equals, 0, "GestureLeft");
+                var talkClip = Make(new AnimationClip { name = "TalkPattern" });
+                AnimationUtility.SetEditorCurve(talkClip, Shape("mouth_a"), new AnimationCurve(new Keyframe(0, 0), new Keyframe(.5f, 100)));
+                var driverType = AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType("VRC.SDK3.Avatars.Components.VRCAvatarParameterDriver")).FirstOrDefault(t => t != null);
+                controller.AddLayer("Talk Control");
+                var control = controller.layers[1].stateMachine;
+                var speaking = control.AddState("Speaking");
+                control.AddAnyStateTransition(speaking).AddCondition(AnimatorConditionMode.Greater, 0, "Viseme");
+                if (driverType != null)
+                    using (var driver = new SerializedObject(speaking.AddStateMachineBehaviour(driverType)))
+                    {
+                        var list = driver.FindProperty("parameters"); list.arraySize = 1;
+                        list.GetArrayElementAtIndex(0).FindPropertyRelative("name").stringValue = "Talk";
+                        driver.ApplyModifiedPropertiesWithoutUndo();
+                    }
+                controller.AddLayer("Talk");
+                var talk = controller.layers[2].stateMachine;
+                var mouth = talk.AddState("Mouth"); mouth.motion = talkClip;
+                talk.AddAnyStateTransition(mouth).AddCondition(AnimatorConditionMode.If, 0, "Talk");
+                foreach (var layer in controller.layers) foreach (var state in RimeEmoBuild.States(layer.stateMachine)) state.writeDefaultValues = false;
+
+                Assert(!RimeEmoFaceSync.Analyze(project, true, true).AnimatedBlink, "VRChat's own blinking was treated as animated");
+                var sync = RimeEmoFaceSync.Analyze(project, false, false);
+                Assert(sync.AnimatedBlink && sync.BlinkShapes.SequenceEqual(new[] { "eye_blink" }) && Mathf.Approximately(sync.blinkLength, 4), "the resting face's blink was not found");
+                if (driverType != null) Assert(sync.AnimatedLipSync && sync.lipShapes.SetEquals(new[] { "mouth_a" }), "the FX lip sync keys were not found through the driven Talk parameter");
+                // A still expression (even a few frames long) gets the whole blink and loops; one with its eyes held shut keeps them shut.
+                var smile = Make(new AnimationClip()); AnimationUtility.SetEditorCurve(smile, Shape("smile"), AnimationCurve.Constant(0, 1f / 6, 100));
+                sync.AddBlink(smile);
+                Assert(AnimationUtility.GetEditorCurve(smile, Shape("eye_blink")) is AnimationCurve blink && blink.Evaluate(.02f) > 99 && Mathf.Approximately(blink.keys[blink.length - 1].time, 4)
+                    && AnimationUtility.GetAnimationClipSettings(smile).loopTime, "a still expression did not get the blink");
+                // A motion played once keeps blinking after it ends, holding its last pose, and finally rests with open eyes.
+                var once = Make(new AnimationClip()); AnimationUtility.SetEditorCurve(once, Shape("smile"), new AnimationCurve(new Keyframe(0, 0), new Keyframe(1f / 6, 100)));
+                sync.AddBlink(once);
+                Assert(!AnimationUtility.GetAnimationClipSettings(once).loopTime && once.length >= RimeEmoFaceSync.OnceBlinkTime
+                    && AnimationUtility.GetEditorCurve(once, Shape("eye_blink")) is AnimationCurve onceBlink && onceBlink.Evaluate(8.02f) > 99 && Mathf.Approximately(onceBlink.keys[onceBlink.length - 1].value, 0)
+                    && Mathf.Approximately(AnimationUtility.GetEditorCurve(once, Shape("smile")).Evaluate(8), 100), "a motion played once stopped blinking when it ended");
+                var shut = Make(new AnimationClip()); AnimationUtility.SetEditorCurve(shut, Shape("eye_blink"), AnimationCurve.Constant(0, 1f / 60, 100));
+                sync.AddBlink(shut);
+                Assert(RimeEmoClips.IsConstant(AnimationUtility.GetEditorCurve(shut, Shape("eye_blink")), 100), "a blink was added over eyes held shut");
+                // Pausing: a blinking expression holds its eyes open (not the shut first frame), and the lip sync keys are held only where asked.
+                var own = Make(UnityEngine.Object.Instantiate(idle));
+                sync.RemoveBlink(own);
+                Assert(RimeEmoClips.IsConstant(AnimationUtility.GetEditorCurve(own, Shape("eye_blink")), 0), "pausing did not stop an expression's own blink");
+                if (driverType != null)
+                {
+                    sync.PauseLipSync(smile);
+                    Assert(RimeEmoClips.IsConstant(AnimationUtility.GetEditorCurve(smile, Shape("mouth_a")), 0), "pausing lip sync did not hold its keys");
+                }
+                // With Write Defaults on, a state without the keys would still write them, so the pause is not offered.
+                mouth.writeDefaultValues = true;
+                Assert(!RimeEmoFaceSync.Analyze(project, false, false).CanPauseLipSync, "lip sync pause was offered with Write Defaults on");
+            }
+            finally { foreach (var o in made) if (o) UnityEngine.Object.DestroyImmediate(o); }
+        }
+
+        // Hand expressions are found in the shapes avatars build them with, not only as direct AnyState transitions.
+        static void TestSourceRules()
+        {
+            var controller = new AnimatorController();
+            var clips = Enumerable.Range(0, 7).Select(i => new AnimationClip { name = "Hand" + i }).ToArray();
+            try
+            {
+                foreach (var name in new[] { "GestureLeft", "GestureRight" }) controller.AddParameter(name, AnimatorControllerParameterType.Int);
+                controller.AddParameter("GestureLeftWeight", AnimatorControllerParameterType.Float);
+                controller.AddParameter("Toggle", AnimatorControllerParameterType.Bool);
+                controller.AddLayer("Left Hand");
+                var left = controller.layers[0].stateMachine;
+                var idle = left.AddState("Idle");
+                // State-to-state transition, as many per-hand layers are wired.
+                var open = left.AddState("Open"); open.motion = clips[0];
+                idle.AddTransition(open).AddCondition(AnimatorConditionMode.Equals, 2, "GestureLeft");
+                // A fist Blend Tree on the trigger weight: the fully pressed child is the expression.
+                var tree = new BlendTree { blendType = BlendTreeType.Simple1D, blendParameter = "GestureLeftWeight" };
+                tree.AddChild(clips[1], 0); tree.AddChild(clips[2], 1);
+                var fist = left.AddState("Fist"); fist.motion = tree;
+                left.AddAnyStateTransition(fist).AddCondition(AnimatorConditionMode.Equals, 1, "GestureLeft");
+                // A sub-state machine reached by a gesture, entering its default state.
+                var nested = left.AddStateMachine("Point");
+                var point = nested.AddState("PointFace"); point.motion = clips[3]; nested.defaultState = point;
+                idle.AddTransition(nested).AddCondition(AnimatorConditionMode.Equals, 3, "GestureLeft");
+                // A gimmick that also needs a toggle is counted, not imported; "not this hand shape" gates are ignored.
+                var gimmick = left.AddState("Gimmick"); gimmick.motion = clips[4];
+                var gated = left.AddAnyStateTransition(gimmick);
+                gated.AddCondition(AnimatorConditionMode.Equals, 6, "GestureLeft"); gated.AddCondition(AnimatorConditionMode.If, 0, "Toggle");
+                var pause = left.AddState("Pause"); pause.motion = clips[5];
+                idle.AddTransition(pause).AddCondition(AnimatorConditionMode.NotEqual, 1, "GestureLeft");
+                // A face lock that is off by default gates the hand layer (mao, anima): the face is still the hand's.
+                var locked = left.AddState("Peace"); locked.motion = clips[6];
+                var gate = left.AddAnyStateTransition(locked);
+                gate.AddCondition(AnimatorConditionMode.Equals, 4, "GestureLeft"); gate.AddCondition(AnimatorConditionMode.IfNot, 0, "Toggle");
+                var rules = RimeEmoGestures.SourceRules(controller, out int conditional);
+                string Rule(int l, int r, AnimationClip c) => l + "," + r + "," + c.name;
+                var found = rules.Select(r => Rule(r.left, r.right, r.clip)).OrderBy(s => s).ToArray();
+                var expected = new[] { Rule(2, -1, clips[0]), Rule(1, -1, clips[2]), Rule(3, -1, clips[3]), Rule(4, -1, clips[6]) }.OrderBy(s => s).ToArray();
+                Assert(found.SequenceEqual(expected), "source hand expressions were not found: " + string.Join(" / ", found));
+                Assert(conditional == 1, "a gimmick transition with another condition was not counted");
+            }
+            finally
+            {
+                foreach (var clip in clips) UnityEngine.Object.DestroyImmediate(clip);
+                UnityEngine.Object.DestroyImmediate(controller);
+            }
         }
 
         static void TestAssignments()
@@ -64,6 +195,7 @@ namespace RimeEmo.Editor
                 AssetDatabase.CreateFolder(root, "Animations");
                 AssetDatabase.CreateFolder(root, "Motions");
                 project = ScriptableObject.CreateInstance<RimeEmoProject>(); project.avatarName = "Build Check";
+                project.expressionMenu = false; // The plain gesture layer first; TestMenuAndTracking adds the menu.
                 project.shapes.Add(new ShapeEntry { path = "Face", shape = "Smile", defaultValue = 12, part = FacePart.Mouth });
                 project.shapes.Add(new ShapeEntry { path = "Face", shape = "Blink", defaultValue = 4, part = FacePart.LeftEye });
                 AssetDatabase.CreateAsset(project, root + "/Project.asset");
@@ -141,6 +273,7 @@ namespace RimeEmo.Editor
                 project.gestureRules.RemoveAll(r => r.clip == fresh); // The settings-window checks below count the original rules.
                 Assert(AssetDatabase.GetSubFolders(first).Length == 0, "rebuild created a build folder");
                 TestWrittenShapes(project);
+                TestMenuAndTracking(project, sourceClip);
                 TestSourceGestureOverride(project, source);
                 TestSettingsWindows(project);
             }
@@ -166,6 +299,55 @@ namespace RimeEmo.Editor
                 Assert(RimeEmoBuild.WrittenShapes(project, sources).SetEquals(new[] { project.shapes[0].shape }), "a key held at Default Face was written");
             }
             finally { UnityEngine.Object.DestroyImmediate(clip); }
+        }
+
+        static void TestMenuAndTracking(RimeEmoProject project, AnimationClip assignedClip)
+        {
+            string recorded = RimeEmoBuildState.Fingerprint(project);
+            project.expressionMenu = true;
+            RimeEmoFaceMenu.SetTracking(project, assignedClip, true, false);
+            try
+            {
+                Assert(RimeEmoBuildState.Fingerprint(project) != recorded, "the menu and the blink pause were not part of the fingerprint");
+                var built = RimeEmoBuild.Build(project);
+                Assert(built.parameters.Any(p => p.name == RimeEmoFaceMenu.LockParameter && p.type == AnimatorControllerParameterType.Bool)
+                    && built.parameters.Any(p => p.name == RimeEmoFaceMenu.FaceParameter && p.type == AnimatorControllerParameterType.Int), "menu parameters were not declared");
+                var layer = built.layers[0].stateMachine;
+                var menuClips = RimeEmoFaceMenu.MenuClips(project);
+                // A copy of a source FX clip played outside the hand layers (lip sync, talk, AFK) is not offered as a face.
+                var talk = new AnimationClip { name = "Talk" };
+                AnimationUtility.SetEditorCurve(talk, RimeEmoClips.Binding(project.shapes[0]), new AnimationCurve(new Keyframe(0, 0), new Keyframe(1, 100)));
+                project.animations.Add(new ClipEntry { clip = talk, source = assignedClip });
+                try { Assert(!RimeEmoFaceMenu.MenuClips(project).Contains(talk), "a source FX clip outside the hand layers was offered in the menu"); }
+                finally { project.animations.RemoveAt(project.animations.Count - 1); UnityEngine.Object.DestroyImmediate(talk); }
+                Assert(menuClips.Count > 0 && layer.states.Length == 64 + menuClips.Count, "menu expressions did not get their own states");
+                var gesture = layer.anyStateTransitions.Where(t => t.conditions.Any(c => c.parameter == "GestureLeft")).ToArray();
+                // Locked or with a menu expression chosen, the hands no longer change the face.
+                Assert(gesture.Length == 64 && gesture.All(t => t.conditions.Any(c => c.parameter == RimeEmoFaceMenu.LockParameter && c.mode == AnimatorConditionMode.IfNot)
+                    && t.conditions.Any(c => c.parameter == RimeEmoFaceMenu.FaceParameter && c.mode == AnimatorConditionMode.Equals && c.threshold == 0)), "hand transitions ignore the lock or the menu");
+                for (int i = 0; i < menuClips.Count; i++)
+                {
+                    var state = layer.states.Single(s => s.state.name == "Menu " + (i + 1)).state;
+                    Assert(state.motion && layer.anyStateTransitions.Any(t => t.destinationState == state && t.conditions.Length == 1
+                        && t.conditions[0].parameter == RimeEmoFaceMenu.FaceParameter && t.conditions[0].threshold == i + 1), "menu expression " + (i + 1) + " is not selectable");
+                }
+                var trackingType = RimeEmoFaceMenu.TrackingControlType;
+                if (trackingType != null)
+                {
+                    string Eyes(string name) => layer.states.Single(s => s.state.name == name).state.behaviours.Where(trackingType.IsInstanceOfType)
+                        .Select(b => trackingType.GetField("trackingEyes").GetValue(b).ToString() + "/" + trackingType.GetField("trackingMouth").GetValue(b)).SingleOrDefault();
+                    // The paused expression pauses blinking, every other state gives it back, and lip sync is left alone.
+                    Assert(Eyes("L3 R4") == "Animation/NoChange", "an expression set to pause blinking did not pause it: " + Eyes("L3 R4"));
+                    Assert(Eyes("L0 R0") == "Tracking/NoChange", "other states did not give blinking back: " + Eyes("L0 R0"));
+                }
+            }
+            finally
+            {
+                RimeEmoFaceMenu.SetTracking(project, assignedClip, false, false);
+                project.expressionMenu = false;
+            }
+            Assert(project.tracking.Count == 0 && RimeEmoBuildState.Fingerprint(project) == recorded, "turning the menu and pause off did not restore the fingerprint");
+            RimeEmoBuild.Build(project);
         }
 
         static void TestSourceGestureOverride(RimeEmoProject project, AnimatorController source)

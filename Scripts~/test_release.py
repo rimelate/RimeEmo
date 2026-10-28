@@ -25,6 +25,9 @@ class ReleaseTests(unittest.TestCase):
                 })
         self.assertIn("Editor/UI/Icons/LICENSE.txt", files)
         self.assertIn("Editor/UI/Icons/ATTRIBUTION.txt", files)
+        self.assertIn("Editor/RimeEmoWindow.cs", files)
+        for name in files:
+            self.assertNotRegex(name, r"Checks\.cs|SelfTests\.cs")
 
     def test_unreviewed_texture_is_rejected(self):
         with tempfile.TemporaryDirectory() as folder:

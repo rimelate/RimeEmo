@@ -31,6 +31,10 @@
  --md-state-hover: rgba(227, 227, 227, 0.08);
  --md-state-pressed: rgba(227, 227, 227, 0.12);
  --md-primary-hover-layer: rgba(168, 199, 250, 0.08);
+ /* Shape Key rows in the clip (tints of --md-primary; change them with it) */
+ --re-shape-changed: rgba(168, 199, 250, 0.2);
+ --re-shape-included: rgba(168, 199, 250, 0.07);
+ --re-shape-included-edge: rgba(168, 199, 250, 0.35);
  /* Shape */
  --md-shape-xs: 4px;
  --md-shape-s: 8px;
@@ -449,7 +453,7 @@
 .re-shape-list { flex-grow: 1; flex-basis: 0; min-height: 0; margin-top: 2px; }
 .re-shape-empty { margin: 12px 8px; }
 /* Row height = fixedItemHeight in RimeEmoStaticToolkitUI.cs. */
-.re-shape-row { height: 32px; flex-direction: row; align-items: center; padding-left: 8px; }
+.re-shape-row { height: 32px; flex-direction: row; align-items: center; padding-left: 8px; border-left-width: 3px; border-left-color: transparent; }
 .re-shape-label { width: 30%; min-width: 120px; max-width: 280px; overflow: hidden; -unity-text-overflow-position: end; text-overflow: ellipsis; white-space: nowrap; }
 /* A short slider: the whole 0–100 range stays within a small mouse movement. */
 .re-shape-slider { flex-grow: 1; flex-basis: 0; min-width: 120px; max-width: 480px; margin: 0 4px 0 0; }
@@ -461,7 +465,13 @@
 .re-shape-row.is-unset:hover .re-shape-number { opacity: 1; }
 .re-shape-row .re-button { height: 26px; min-width: 26px; padding: 0 6px; background-color: transparent; color: var(--md-on-surface-variant); }
 .re-shape-row .re-button:hover { background-color: var(--md-state-hover); color: var(--md-on-surface); }
-.re-shape-row.is-default { border-left-width: 3px; border-left-color: var(--md-primary); }
+/* Row colour: how the clip uses the Shape Key. Strong = in the clip with a value other than Default Face (or moving),
+   light = in the clip at the Default Face value, none = not in the clip. The 含まれる and Defaultと違う filter buttons are tinted the same way. */
+.re-shape-row.is-changed { background-color: var(--re-shape-changed); border-left-color: var(--md-primary); }
+.re-shape-row.is-included { background-color: var(--re-shape-included); border-left-color: var(--re-shape-included-edge); }
+.re-segment.re-legend-changed { background-color: var(--re-shape-changed); }
+.re-segment.re-legend-included { background-color: var(--re-shape-included); }
+.re-segment.re-legend-changed.is-active, .re-segment.re-legend-included.is-active { background-color: var(--md-secondary-container); }
 /* Not in the clip: the face uses Default Face. Moving the slider adds it. */
 .re-shape-row.is-unset .re-shape-label { color: var(--md-on-surface-variant); }
 .re-shape-row.is-unset .re-shape-slider { opacity: 0.55; }
@@ -520,7 +530,7 @@
  background-color: var(--md-surface-container-high);
  border-radius: 20px;
  border-width: 1px;
- border-color: var(--md-outline-variant);
+ border-color: var(--md-outline);
 }
 #guide-title { -unity-font-style: bold; font-size: 14px; }
 .re-guide-text { white-space: normal; margin-top: 10px; margin-bottom: 8px; color: var(--md-on-surface-variant); }
@@ -542,27 +552,27 @@
 .re-lang-ja #guide-title { -unity-font-style: normal; }
 .re-lang-ja .re-title, .re-lang-ja .re-heading { font-size: 14px; }
 
-/* Settings links stay at the bottom while the settings content scrolls. */
+/* Settings links stay at the bottom while the settings content scrolls: a bar of icon buttons, large enough to
+   find at a glance but not so tall that it takes height from the settings. */
 .re-settings-scroll { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-height: 0; }
 .re-support-footer {
  flex-direction: row;
  justify-content: center;
  align-items: center;
  flex-shrink: 0;
- min-height: 144px;
- padding: 16px 24px;
+ padding: 8px 16px;
+ border-top-width: 1px;
+ border-top-color: var(--md-outline-variant);
 }
 .re-social-link {
- width: 96px;
- min-width: 96px;
- height: 96px;
+ height: 56px;
  flex-shrink: 0;
- margin: 0 12px;
+ margin: 0 8px;
  border-radius: 16px;
- color: var(--md-on-surface);
+ color: var(--md-on-surface-variant);
 }
-.re-social-link--icon { padding-left: 0; padding-right: 0; }
-.re-brand-icon { width: 48px; height: 48px; flex-shrink: 0; opacity: 0.9; }
+.re-social-link--icon { width: 56px; min-width: 56px; padding-left: 0; padding-right: 0; }
+.re-brand-icon { width: 30px; height: 30px; flex-shrink: 0; opacity: 0.8; }
 .re-button.re-social-link:hover { background-color: var(--md-state-hover); }
 .re-button.re-social-link:focus { border-color: var(--md-on-surface); }
 .re-button.re-social-link:active { background-color: var(--md-state-pressed); }

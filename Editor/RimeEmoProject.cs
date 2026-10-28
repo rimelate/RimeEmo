@@ -79,6 +79,18 @@ namespace RimeEmo.Editor
         public string generatedFingerprint;
         // Created with the first group; may be shared with other avatar settings.
         public RimeEmoShapeGroupSet shapeGroups;
+        // Expressions that pause VRChat's own blinking or lip sync while they show. Chosen per expression; none by default.
+        public List<TrackingSetting> tracking = new List<TrackingSetting>();
+        // Adds a face lock and every material to the Expressions Menu when applied.
+        public bool expressionMenu = true;
+    }
+
+    [Serializable]
+    public sealed class TrackingSetting
+    {
+        // The material clip; a saved motion is keyed by its animation clip.
+        public AnimationClip clip;
+        public bool stopBlink, stopLipSync;
     }
 
     [Serializable]

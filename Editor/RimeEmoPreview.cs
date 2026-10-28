@@ -19,6 +19,7 @@ namespace RimeEmo.Editor
         private sealed class BlendShapeState
         {
             public SkinnedMeshRenderer renderer;
+            public string path;
             public float[] weights;
         }
         private sealed class SampleBinding
@@ -120,7 +121,7 @@ namespace RimeEmo.Editor
                 if (mesh == null) continue;
                 var weights = new float[mesh.blendShapeCount];
                 for (var i = 0; i < weights.Length; i++) weights[i] = renderer.GetBlendShapeWeight(i);
-                blendShapes.Add(new BlendShapeState { renderer = renderer, weights = weights });
+                blendShapes.Add(new BlendShapeState { renderer = renderer, path = AnimationUtility.CalculateTransformPath(renderer.transform, clone.transform), weights = weights });
             }
 
             var renderers = clone.GetComponentsInChildren<Renderer>(true);
@@ -200,20 +201,12 @@ namespace RimeEmo.Editor
             facePath = project ? RimeEmoFace.Path(project) : null;
             Invalidate();
             if (clone == null || project == null || project.shapes == null) return;
-            foreach (var shape in project.shapes)
-            {
-                var target = string.IsNullOrEmpty(shape.path) ? clone.transform : clone.transform.Find(shape.path);
-                var renderer = target != null ? target.GetComponent<SkinnedMeshRenderer>() : null;
-                if (renderer == null || renderer.sharedMesh == null) continue;
-                var index = renderer.sharedMesh.GetBlendShapeIndex(shape.shape);
-                if (index >= 0) renderer.SetBlendShapeWeight(index, shape.defaultValue);
-            }
+            // Every Skinned Mesh Renderer of the clone is in blendShapes, so this also covers what transform.Find reached.
             foreach (var state in blendShapes)
             {
                 if (state.renderer == null || state.renderer.sharedMesh == null) continue;
-                var path = AnimationUtility.CalculateTransformPath(state.renderer.transform, clone.transform);
                 foreach (var shape in project.shapes)
-                    if (shape.path == path)
+                    if (shape.path == state.path)
                     {
                         var index = state.renderer.sharedMesh.GetBlendShapeIndex(shape.shape);
                         if (index >= 0)
@@ -366,7 +359,7 @@ namespace RimeEmo.Editor
             foreach (var state in blendShapes)
             {
                 if (state.renderer == null) continue;
-                if (facePath != null && AnimationUtility.CalculateTransformPath(state.renderer.transform, clone.transform) != facePath) continue;
+                if (facePath != null && state.path != facePath) continue;
                 for (var i = 0; i < state.weights.Length; i++) state.renderer.SetBlendShapeWeight(i, state.weights[i]);
             }
         }

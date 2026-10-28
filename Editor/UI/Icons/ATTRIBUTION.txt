@@ -7,9 +7,6 @@ Modifications by RimeEmo: static instances (FILL 0 and FILL 1, wght 400, GRAD 0,
 subset to the icons listed in MaterialSymbolsRounded-Subset.codepoints.txt.
 Files: MaterialSymbolsRounded-Subset.ttf, MaterialSymbolsRounded-Fill-Subset.ttf
 
-MaterialIcons-Regular.ttf (Material Icons, Apache License 2.0) is no longer used by RimeEmo and can be deleted
-together with MaterialIcons-Regular.codepoints.txt and their .meta files.
-
 External link icons
 Link-github.png and Link-x.png: Simple Icons (CC0 1.0 Universal).
 Source: https://github.com/simple-icons/simple-icons/tree/develop/icons

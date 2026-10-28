@@ -81,6 +81,7 @@ namespace RimeEmo.Editor
             UI<Button>("rules-save").clicked += AssetDatabase.SaveAssets;
             UI<FloatField>("gesture-blend").isDelayed = true;
             UI<Toggle>("source-gesture-override").RegisterValueChangedCallback(e => Edit(() => Project.overrideSourceGestureFaces = e.newValue));
+            UI<Toggle>("expression-menu").RegisterValueChangedCallback(e => Edit(() => Project.expressionMenu = e.newValue));
             UI<FloatField>("gesture-blend").RegisterValueChangedCallback(e => Edit(() => Project.gestureBlendSeconds = Mathf.Clamp(float.IsNaN(e.newValue) || float.IsInfinity(e.newValue) ? 0 : e.newValue, 0, 10)));
             UI<Button>("fx-inspect").clicked += () => { var project = Project; if (project) { Selection.activeObject = project.generatedFX; EditorGUIUtility.PingObject(project.generatedFX); } };
             UI<Button>("fx-apply").clicked += () => Run(() => { RimeEmoApply.Apply(Project, Avatar); status = RimeEmoLocalization.T("アバターに適用しました。Sceneを保存してください。"); });
@@ -116,6 +117,7 @@ namespace RimeEmo.Editor
             var project = Project; var avatar = Avatar;
             UI<ObjectField>("gesture-project").SetValueWithoutNotify(project); UI<ObjectField>("gesture-avatar").SetValueWithoutNotify(avatar);
             UI<FloatField>("gesture-blend").SetValueWithoutNotify(project ? project.gestureBlendSeconds : 0.1f);
+            UI<Toggle>("expression-menu").SetValueWithoutNotify(project && project.expressionMenu); UI<Toggle>("expression-menu").SetEnabled(project);
             UI<Button>("rule-add").SetEnabled(project); UI<Button>("rules-import").SetEnabled(project && project.sourceFX is AnimatorController);
             UI<Button>("fx-inspect").SetEnabled(project && project.generatedFX);
             UI<Button>("fx-remove").SetEnabled(project && avatar && RimeEmoApply.FindApplied(project, avatar));
@@ -381,23 +383,23 @@ namespace RimeEmo.Editor
         private void ImportRules()
         {
             var project = Project;
-            int count = 0;
-            if (!(project.sourceFX is AnimatorController controller)) return;
-            foreach (var layer in controller.layers)
-            foreach (var transition in layer.stateMachine.anyStateTransitions)
+            if (!(project.sourceFX is AnimatorController controller)) { status = RimeEmoLocalization.T("読込元FXがありません。設定ページで指定してください。"); return; }
+            int added = 0, taken = 0, rejected = 0;
+            var rules = RimeEmoGestures.SourceRules(controller, out int conditional);
+            foreach (var rule in rules)
             {
-                if (transition.hasExitTime || !transition.destinationState || !(transition.destinationState.motion is AnimationClip source)) continue;
-                var conditions = transition.conditions;
-                if (conditions.Length == 0 || conditions.Any(c => (c.parameter != "GestureLeft" && c.parameter != "GestureRight") || c.mode != AnimatorConditionMode.Equals || c.threshold < 0 || c.threshold > 7 || c.threshold != Mathf.Floor(c.threshold))) continue;
-                if (conditions.GroupBy(c => c.parameter).Any(g => g.Select(c => c.threshold).Distinct().Count() > 1)) continue;
-                var clip = project.clips.Concat(project.animations).FirstOrDefault(c => c.source == source)?.clip;
-                if (!clip) continue;
-                int l = conditions.Where(c => c.parameter == "GestureLeft").Select(c => (int)c.threshold).DefaultIfEmpty(-1).First();
-                int r = conditions.Where(c => c.parameter == "GestureRight").Select(c => (int)c.threshold).DefaultIfEmpty(-1).First();
-                if (project.gestureRules.Any(x => x.left == l && x.right == r && x.clip == clip && !x.motion)) continue;
-                project.gestureRules.Add(new GestureRule { left = l, right = r, clip = clip }); count++;
+                var clip = project.clips.Concat(project.animations).FirstOrDefault(c => c != null && c.clip && c.source == rule.clip)?.clip;
+                // Not a material yet: copied in, as dropping it on a hand shape does.
+                if (!clip) clip = RimeEmoAssets.Import(project, rule.clip);
+                if (!clip) { rejected++; continue; }
+                // A hand shape assigned already (by hand, or by an earlier import) is left as it is.
+                if (project.gestureRules.Any(x => x != null && x.left == rule.left && x.right == rule.right)) { taken++; continue; }
+                project.gestureRules.Add(new GestureRule { left = rule.left, right = rule.right, clip = clip }); added++;
             }
-            status = count + RimeEmoLocalization.T("件取り込みました。単純なAnyState条件だけが対象です。未対応の条件は手動で割り当ててください。");
+            status = string.Format(RimeEmoLocalization.T("{0}件取り込みました。"), added)
+                + (taken > 0 ? string.Format(RimeEmoLocalization.T(" 割り当て済みの手の形{0}件はそのままにしました。"), taken) : "")
+                + (rejected > 0 ? string.Format(RimeEmoLocalization.T(" 顔の表情ではないClip{0}件は除外しました。"), rejected) : "")
+                + (conditional > 0 ? string.Format(RimeEmoLocalization.T(" ギミックをオンにしたときなど、初期状態では使われない遷移{0}件は対象外です。必要なら手動で割り当ててください。"), conditional) : "");
         }
     }
 }

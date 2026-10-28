@@ -116,6 +116,18 @@ namespace RimeEmo.Editor
                 if (ImportedEditing) EditImported(() => { var settings = AnimationUtility.GetAnimationClipSettings(importedDraft); settings.loopTime = e.newValue; AnimationUtility.SetAnimationClipSettings(importedDraft, settings); });
                 else if (motion) EditMotion(() => motion.loop = e.newValue);
             });
+            foreach (string prefix in new[] { "static-", "motion-" })
+            {
+                string owner = prefix;
+                foreach (string part in new[] { "stop-blink", "stop-lipsync" })
+                    UI<Toggle>(owner + part).RegisterValueChangedCallback(_ => Run(() =>
+                    {
+                        var clip = TrackingTarget;
+                        if (!clip) return;
+                        RimeEmoFaceMenu.SetTracking(project, clip, UI<Toggle>(owner + "stop-blink").value, UI<Toggle>(owner + "stop-lipsync").value);
+                        InvalidateApplyState(); RefreshTracking();
+                    }));
+            }
             UI<Toggle>("snap").RegisterValueChangedCallback(e => { frameSnap = e.newValue; retainedTimeline.FrameSnap = frameSnap; });
             UI<Toggle>("magnet").RegisterValueChangedCallback(e => { cueSnap = e.newValue; retainedTimeline.CueSnap = cueSnap; });
             UI<FloatField>("time").RegisterValueChangedCallback(e => { time = SafeTime(e.newValue); playing = false; showDefault = false; SyncToolkitTime(); RequestToolkitPreview(); });
@@ -270,6 +282,7 @@ namespace RimeEmo.Editor
             notice.style.display = string.IsNullOrEmpty(notice.text) ? DisplayStyle.None : DisplayStyle.Flex;
             UI<TextField>("motion-name").SetValueWithoutNotify(ImportedEditing ? importedDraft.name : valid ? motion.name : "");
             UI<Toggle>("loop").SetValueWithoutNotify(valid && EditingLoop);
+            RefreshTracking();
             UI<Toggle>("snap").SetValueWithoutNotify(frameSnap);
             UI<Toggle>("magnet").SetValueWithoutNotify(cueSnap);
             var face = UI<DropdownField>("face"); face.choices = facePaths.ToList();
@@ -286,6 +299,40 @@ namespace RimeEmo.Editor
             if (!dynamic) RefreshStaticToolkit();
             UpdateGuideHighlight();
             RefreshApplyState();
+        }
+
+        // The material whose blink and lip sync pauses the editor shows: the selected expression, or the open motion once
+        // it is saved (the setting belongs to the saved clip that Gesture and the menu use).
+        private AnimationClip TrackingTarget => !project ? null
+            : mode == 0 ? (EditingDefaultFace ? null : selected)
+            : ImportedEditing ? importedTarget
+            : motion && motion.project == project ? motion.animationClip : null;
+
+        private void RefreshTracking()
+        {
+            if (toolkitRoot == null) return;
+            var clip = TrackingTarget;
+            var setting = RimeEmoFaceMenu.Tracking(project, clip);
+            var sync = avatar && project ? RimeEmoFaceSync.Analyze(project, avatar) : new RimeEmoFaceSync();
+            foreach (string prefix in new[] { "static-", "motion-" })
+            {
+                foreach (string part in new[] { "stop-blink", "stop-lipsync" })
+                {
+                    var toggle = UI<Toggle>(prefix + part);
+                    bool eyes = part == "stop-blink", supported = eyes ? sync.CanPauseBlink : sync.CanPauseLipSync;
+                    toggle.SetValueWithoutNotify(setting != null && (eyes ? setting.stopBlink : setting.stopLipSync));
+                    toggle.SetEnabled(clip && supported);
+                    // The layout's own tooltip (VRChat's blinking and lip sync), kept to show again for such an avatar.
+                    if (toggle.userData == null) toggle.userData = toggle.tooltip;
+                    toggle.tooltip = !supported ? RimeEmoLocalization.T(eyes
+                            ? "このアバターのまばたきが見つからないため、ここでは止められません（VRChatのまばたき設定がなく、元FXの普段の表情にもまばたきがありません）。"
+                            : "このアバターの口パクはFXで動いていて、Write DefaultsがOnか口パクのレイヤーが見つからないため、ここでは止められません。")
+                        : eyes && sync.AnimatedBlink ? RimeEmoLocalization.T("このアバターはアニメーションでまばたきします。オフの表情には元FXの普段の表情のまばたきを付け、オンの表情ではまばたきさせません。")
+                        : !eyes && sync.AnimatedLipSync ? RimeEmoLocalization.T("このアバターは口パクをFXで動かしています。オンにすると、この表情の間は口パクのShape KeyをDefault Faceの値に固定します。")
+                        : (string)toggle.userData;
+                }
+            }
+            UI<VisualElement>("static-tracking").style.display = EditingDefaultFace ? DisplayStyle.None : DisplayStyle.Flex;
         }
 
         private void SyncToolkitTime()

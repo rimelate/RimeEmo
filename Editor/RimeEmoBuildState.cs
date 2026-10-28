@@ -14,6 +14,25 @@ namespace RimeEmo.Editor
     {
         internal enum State { Unavailable, NotApplied, UpToDate, Stale }
 
+        // Describe runs on every edit and scene change; compiling each assigned motion again made slider drags and
+        // scene edits slow. Contents are kept until one of their sources changes. Build never uses this cache.
+        private sealed class CachedContent { internal string signature, text; }
+        private static readonly Dictionary<(Object, Object), CachedContent> contentCache = new Dictionary<(Object, Object), CachedContent>();
+        // Not every curve edit marks the clip dirty, so curve edits are counted as well.
+        private static readonly Dictionary<int, int> curveEdits = new Dictionary<int, int>();
+
+        static RimeEmoBuildState()
+        {
+            AnimationUtility.onCurveWasModified += (clip, binding, type) =>
+            {
+                if (!clip) return;
+                curveEdits.TryGetValue(clip.GetInstanceID(), out int count); curveEdits[clip.GetInstanceID()] = count + 1;
+            };
+            // Undo and reimports can restore content without a new dirty count.
+            Undo.undoRedoPerformed += () => contentCache.Clear();
+            EditorApplication.projectChanged += () => contentCache.Clear();
+        }
+
         internal static State Describe(RimeEmoProject project, GameObject avatar)
         {
             if (!project || !avatar || EditorUtility.IsPersistent(avatar)) return State.Unavailable;
@@ -21,12 +40,16 @@ namespace RimeEmo.Editor
             if (!applied) return State.NotApplied;
             // An older build, a Replace-mode component from before, or a build never applied leaves the avatar behind.
             if (applied != project.generatedFX || !RimeEmoApply.AppliedAsAppend(project, avatar) || string.IsNullOrEmpty(project.generatedFingerprint)) return State.Stale;
-            return project.generatedFingerprint == Fingerprint(project) ? State.UpToDate : State.Stale;
+            return project.generatedFingerprint == Fingerprint(project, true, RimeEmoFaceSync.Analyze(project, avatar)) ? State.UpToDate : State.Stale;
         }
 
-        // Covers every input of RimeEmoBuild.Build: face shapes, the resolved 8×8 table and the content of
-        // each assigned clip or motion. The source FX only counts while its gesture faces are overridden.
-        internal static string Fingerprint(RimeEmoProject project)
+        internal static string Fingerprint(RimeEmoProject project) => Fingerprint(project, false, RimeEmoFaceSync.Analyze(project, (GameObject)null));
+        internal static string Fingerprint(RimeEmoProject project, RimeEmoFaceSync sync) => Fingerprint(project, false, sync);
+
+        // Covers every input of RimeEmoBuild.Build: face shapes, the resolved 8×8 table, the content of each assigned
+        // clip or motion, and how the avatar blinks and lip-syncs. The source FX only counts while its gesture faces
+        // are overridden.
+        private static string Fingerprint(RimeEmoProject project, bool cached, RimeEmoFaceSync sync)
         {
             if (!project) return "";
             var text = new StringBuilder();
@@ -51,12 +74,48 @@ namespace RimeEmo.Editor
                 {
                     Object key = rule.motion ? (Object)rule.motion : rule.clip;
                     text.Append(Id(key));
-                    if (key && !contents.ContainsKey(key)) contents[key] = Content(project, rule);
+                    if (key && !contents.ContainsKey(key)) contents[key] = cached ? CachedContentOf(project, rule, key) : Content(project, rule);
                 }
                 text.Append('\n');
             }
+            text.Append(sync.Describe());
+            text.Append("menu:").Append(project.expressionMenu).Append('\n');
+            int index = 0;
+            foreach (var clip in RimeEmoFaceMenu.MenuClips(project))
+            {
+                // The name is the menu label; a menu clip mirrors how Build picks its source, like an assignment by clip.
+                text.Append('m').Append(++index).Append(':').Append(Id(clip)).Append(':').Append(clip.name).Append('\n');
+                var rule = new GestureRule { clip = clip };
+                if (!contents.ContainsKey(clip)) contents[clip] = cached ? CachedContentOf(project, rule, clip) : Content(project, rule);
+            }
+            foreach (var setting in project.tracking.Where(t => t != null && t.clip && (t.stopBlink || t.stopLipSync)).OrderBy(t => Id(t.clip), StringComparer.Ordinal))
+                text.Append("tracking:").Append(Id(setting.clip)).Append(':').Append(setting.stopBlink).Append(':').Append(setting.stopLipSync).Append('\n');
             foreach (var pair in contents.OrderBy(p => Id(p.Key), StringComparer.Ordinal)) text.Append(Id(pair.Key)).Append('\n').Append(pair.Value);
             return Hash128.Compute(text.ToString()).ToString();
+        }
+
+        private static string CachedContentOf(RimeEmoProject project, GestureRule rule, Object key)
+        {
+            var dynamicSource = rule.motion ? rule.motion : RimeEmoDynamicClips.Find(project, rule.clip);
+            var signature = new StringBuilder();
+            void Source(Object source)
+            {
+                if (!source) { signature.Append("-;"); return; }
+                int id = source.GetInstanceID();
+                curveEdits.TryGetValue(id, out int edits);
+                signature.Append(id).Append(':').Append(EditorUtility.GetDirtyCount(source)).Append(':').Append(edits).Append(';');
+            }
+            if (!dynamicSource) Source(rule.clip);
+            else
+            {
+                // A compiled motion also reads the project's face shapes and every clip its blocks use.
+                Source(project); Source(dynamicSource); Source(dynamicSource.project); Source(dynamicSource.sourceClip);
+                foreach (var track in dynamicSource.tracks) foreach (var state in track.states) Source(state.clip);
+            }
+            string text = signature.ToString();
+            if (contentCache.TryGetValue((project, key), out var entry) && entry.signature == text) return entry.text;
+            contentCache[(project, key)] = entry = new CachedContent { signature = text, text = Content(project, rule) };
+            return entry.text;
         }
 
         // Mirrors how Build picks its source: a motion is compiled, a static clip is copied as is.
