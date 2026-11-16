@@ -6,6 +6,28 @@
   "packages": {
     "io.github.rimelate.rimeemo": {
       "versions": {
+        "0.3.0": {
+          "name": "io.github.rimelate.rimeemo",
+          "displayName": "RimeEmo",
+          "version": "0.3.0",
+          "unity": "2022.3",
+          "description": "VRChat expression and motion editor with gesture assignments and Modular Avatar integration.",
+          "author": {
+            "name": "rimelate",
+            "email": "235019602+rimelate@users.noreply.github.com",
+            "url": "https://github.com/rimelate"
+          },
+          "url": "https://github.com/rimelate/RimeEmo/releases/download/v0.3.0/RimeEmo_v0.3.0.zip",
+          "documentationUrl": "https://github.com/rimelate/RimeEmo#readme",
+          "changelogUrl": "https://github.com/rimelate/RimeEmo/releases",
+          "license": "UNLICENSED",
+          "vpmDependencies": {},
+          "legacyFolders": {
+            "Assets\\rimerime\\RimeEmo\\Editor": "4b5bbc333bfa14248b03a32bd41545c9",
+            "Assets\\rimerime\\RimeEmo\\Runtime": "a3ad8d44e03eacf49b748cf002c45f3f"
+          },
+          "zipSHA256": "098d398704e789985362f44ba06aa8013d2f28d8208c239855d99fdcb834b300"
+        },
         "0.2.0": {
           "name": "io.github.rimelate.rimeemo",
           "displayName": "RimeEmo",
