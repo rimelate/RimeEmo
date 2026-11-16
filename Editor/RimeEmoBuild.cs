@@ -32,7 +32,7 @@ namespace RimeEmo.Editor
             if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(project))) errors.Add(RimeEmoLocalization.T("Projectを保存してください。"));
             if (!RimeEmoFace.Shapes(project).Any()) errors.Add(RimeEmoLocalization.T("顔メッシュのShape Keyがありません。"));
             // The merged layer shares the avatar's Gesture parameters; MA cannot merge them with another type.
-            if (project.sourceFX is AnimatorController source)
+            if (project.fxApplyMode == FxApplyMode.ModularAvatarAppend && project.sourceFX is AnimatorController source)
                 foreach (string name in new[] { "GestureLeft", "GestureRight" })
                     if (source.parameters.Any(p => p.name == name && p.type != AnimatorControllerParameterType.Int)) errors.Add(name + RimeEmoLocalization.T("がInt以外で定義されています。"));
             if (float.IsNaN(project.gestureBlendSeconds) || float.IsInfinity(project.gestureBlendSeconds) || project.gestureBlendSeconds < 0) errors.Add(RimeEmoLocalization.T("Gestureの切替時間が不正です。"));
@@ -51,14 +51,20 @@ namespace RimeEmo.Editor
         // never needs to change and no folders pile up.
         // The avatar tells how it blinks and lip-syncs; without one, the settings' scene avatar is looked up.
         internal static AnimatorController Build(RimeEmoProject project, GameObject avatar = null)
+            => Build(project, avatar, null, out _);
+
+        internal static AnimatorController Build(RimeEmoProject project, GameObject avatar, string standalonePath, out string fingerprint)
         {
             var errors = Validate(project);
             if (errors.Count != 0) throw new InvalidOperationException(string.Join("\n", errors));
+            // The direct snapshot copies the base controller from disk. Save its edits before
+            // fingerprinting too, so the stored hash describes exactly what will be copied.
+            if (standalonePath != null) AssetDatabase.SaveAssets();
             var sync = RimeEmoFaceSync.Analyze(project, avatar);
-            string fingerprint = RimeEmoBuildState.Fingerprint(project, sync);
+            fingerprint = RimeEmoBuildState.Fingerprint(project, sync);
             string folder = OutputFolder(project);
             RimeEmoAssets.Folder(RimeEmoAssets.GeneratedRoot); RimeEmoAssets.Folder(folder);
-            string path = folder + "/" + ControllerFile;
+            string path = standalonePath ?? folder + "/" + ControllerFile;
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
             if (controller) Clear(controller, path);
             else controller = AnimatorController.CreateAnimatorControllerAtPath(path);
@@ -85,7 +91,7 @@ namespace RimeEmo.Editor
             sync.AddBlink(defaultFace);
             var written = WrittenShapes(project, sources);
             if (sync.AnimatedBlink) written.UnionWith(sync.BlinkShapes);
-            if (project.overrideSourceGestureFaces) written.UnionWith(SourceGestureShapes(project));
+            if (project.overrideSourceGestureFaces) written.UnionWith(SourceGestureShapes(project, sync.baseFx));
             // Lip sync driven by the FX stays with its own layers; only a state that pauses it writes those keys.
             if (sync.AnimatedLipSync) written.ExceptWith(sync.lipShapes);
             AnimationClip Finish(Object key, AnimationClip clip)
@@ -126,6 +132,7 @@ namespace RimeEmo.Editor
             for (int i = 0; i < menuKeys.Count; i++)
                 AddState("Menu " + (i + 1), menuKeys[i], new Vector3(-300, i * 65, 0)).AddCondition(AnimatorConditionMode.Equals, i + 1, RimeEmoFaceMenu.FaceParameter);
             EditorUtility.SetDirty(controller); AssetDatabase.SaveAssets();
+            if (standalonePath != null) return controller;
             Undo.RecordObject(project, "RimeEmo: Rebuild FX");
             project.generatedFX = controller; project.generatedFolder = folder; project.generatedFingerprint = fingerprint;
             EditorUtility.SetDirty(project); AssetDatabase.SaveAssets();
@@ -205,13 +212,16 @@ namespace RimeEmo.Editor
         // (a transition with a GestureLeft/Right condition) or by a Blend Tree on a gesture weight, and only where the
         // value differs from Default Face. Checking the whole layer was too wide: a blink layer that merely pauses
         // during a fist counted its blinking, and a key held at Default Face cannot show through anyway.
-        internal static HashSet<string> SourceGestureShapes(RimeEmoProject project)
+        internal static HashSet<string> SourceGestureShapes(RimeEmoProject project) =>
+            SourceGestureShapes(project, project ? project.sourceFX as AnimatorController : null);
+
+        private static HashSet<string> SourceGestureShapes(RimeEmoProject project, AnimatorController fx)
         {
             var result = new HashSet<string>();
-            if (!project || !(project.sourceFX is AnimatorController)) return result;
+            if (!project || !fx) return result;
             string face = RimeEmoFace.Path(project);
             var defaults = RimeEmoFace.Shapes(project).GroupBy(s => s.shape).ToDictionary(g => g.Key, g => g.First().defaultValue);
-            foreach (var clip in SourceGestureClips(project))
+            foreach (var clip in GestureClips(fx))
                 foreach (var binding in AnimationUtility.GetCurveBindings(clip))
                 {
                     if (!RimeEmoClips.IsShape(binding) || binding.path != face) continue;
@@ -224,18 +234,21 @@ namespace RimeEmo.Editor
         }
 
         // The clips the source FX shows for a hand shape: what its hand-gesture states and gesture-weight Blend Trees play.
-        internal static HashSet<AnimationClip> SourceGestureClips(RimeEmoProject project)
+        internal static HashSet<AnimationClip> SourceGestureClips(RimeEmoProject project) =>
+            GestureClips(project ? project.sourceFX as AnimatorController : null);
+
+        private static HashSet<AnimationClip> GestureClips(AnimatorController fx)
         {
             var states = new HashSet<AnimatorState>(); var trees = new List<Motion>();
-            if (project && project.sourceFX is AnimatorController fx) foreach (var layer in fx.layers) if (layer.stateMachine) CollectGestureStates(layer.stateMachine, states, trees);
+            if (fx) foreach (var layer in fx.layers) if (layer.stateMachine) CollectGestureStates(layer.stateMachine, states, trees);
             return new HashSet<AnimationClip>(states.SelectMany(s => Clips(s.motion)).Concat(trees.SelectMany(Clips)).Where(c => c));
         }
 
         // Source gesture Shape Keys that RimeEmo does not write: where the old expression can still show through.
-        internal static List<string> LeakingShapes(RimeEmoProject project)
+        internal static List<string> LeakingShapes(RimeEmoProject project, GameObject avatar = null)
         {
             // Compiling every assignment and menu expression is the expensive part; most source FXs leave nothing to check.
-            var sourceShapes = SourceGestureShapes(project);
+            var sourceShapes = SourceGestureShapes(project, RimeEmoDirectFx.EffectiveBaseFx(project, avatar));
             if (sourceShapes.Count == 0) return new List<string>();
             var sources = Sources(project, out _);
             try

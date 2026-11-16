@@ -13,9 +13,12 @@ namespace RimeEmo.Editor
 
         private void JumpKey(int direction)
         {
-            var times = motion.tracks.SelectMany(RimeEmoTimeline.Times).Distinct().OrderBy(t => t).ToArray();
+            var times = (ImportedEditing ? RimeEmoFace.Shapes(project).SelectMany(s =>
+                AnimationUtility.GetEditorCurve(importedDraft, RimeEmoClips.Binding(s))?.keys.Select(k => k.time) ?? Enumerable.Empty<float>())
+                : motion.tracks.SelectMany(RimeEmoTimeline.Times)).Distinct().OrderBy(t => t).ToArray();
             if (direction < 0) time = times.Where(t => t < time - 0.0001f).DefaultIfEmpty(0).Last();
-            else time = times.Where(t => t > time + 0.0001f).DefaultIfEmpty(RimeEmoCompiler.Duration(motion)).First();
+            else time = times.Where(t => t > time + 0.0001f).DefaultIfEmpty(EditingDuration).First();
+            ResetKeyframeValue();
             playing = false; showDefault = false; Repaint();
         }
 

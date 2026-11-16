@@ -94,14 +94,7 @@ namespace RimeEmo.Editor
         private void EnsureDraft()
         {
             if (!project) return;
-            if (importedDraft)
-            {
-                // Recover an open draft from the former import-only curve screen.
-                bool wasEdited = hasUnsavedChanges || EditorUtility.IsDirty(importedDraft);
-                var next = RimeEmoQueueImport.Create(project, importedDraft);
-                ReplaceDraft(next);
-                if (wasEdited) { EditorUtility.SetDirty(next); hasUnsavedChanges = true; }
-            }
+            if (keyframeMode) { EnsureKeyframeDraft(); return; }
             if (!motion || motion.project != project) motion = RimeEmoDrafts.Create(project);
             else if (EditorUtility.IsPersistent(motion)) motion = RimeEmoDrafts.Copy(motion);
             RimeEmoTimeline.NormalizeKeeps(motion);
@@ -111,7 +104,7 @@ namespace RimeEmo.Editor
 
         private bool SaveDraftAs(bool saveAs)
         {
-            if (importedDraft) return SaveImportedDraft(saveAs);
+            if (ImportedEditing) return SaveImportedDraft(saveAs);
             if (!motion || !project) return false;
             retainedTimeline?.EndInteraction();
             string current = motion.animationClip ? AssetDatabase.GetAssetPath(motion.animationClip) : "";
@@ -130,7 +123,7 @@ namespace RimeEmo.Editor
             }
             var target = RimeEmoDrafts.SaveTo(motion, path);
             EditorUtility.ClearDirty(motion);
-            hasUnsavedChanges = false; toolkitDirty = true;
+            RefreshDraftDirty(); toolkitDirty = true;
             EditorGUIUtility.PingObject(target); return true;
         }
         // The name field edits the draft; apply it to the saved .anim and its editing data instead of reverting it on save.
@@ -158,18 +151,19 @@ namespace RimeEmo.Editor
         {
             if (!hasUnsavedChanges) return true;
             int choice = EditorUtility.DisplayDialogComplex(RimeEmoLocalization.T("編集中のアニメーション"), RimeEmoLocalization.T("変更を保存しますか？"), RimeEmoLocalization.T("保存"), RimeEmoLocalization.T("キャンセル"), RimeEmoLocalization.T("保存せず進む"));
-            return choice == 0 ? SaveDraft() : choice == 2;
+            return choice == 0 ? SaveAllAnimationDrafts() : choice == 2;
         }
         private void ReplaceDraft(RimeEmoMotion next)
         {
             ClearImportedDraft();
+            keyframeMode = false; queueModeTime = keyframeModeTime = 0;
             retainedTimeline?.EndInteraction();
             if (motion && !EditorUtility.IsPersistent(motion)) { Undo.ClearUndo(motion); DestroyImmediate(motion); }
             retainedTimeline?.SelectedStates.Clear();
             motion = next; activeTrack = activeState = 0; time = dynamicCursor = 0; playing = false; hasUnsavedChanges = false;
             Changed();
         }
-        public override void SaveChanges() { if (SaveDraft()) base.SaveChanges(); }
+        public override void SaveChanges() { if (SaveAllAnimationDrafts()) base.SaveChanges(); }
         private void OnDestroy()
         {
             ClearImportedDraft();

@@ -376,7 +376,25 @@
 .re-preview-host { flex-grow: 1; border-radius: var(--md-shape-m); overflow: hidden; background-color: var(--md-surface-container-low); }
 
 /* ---------- Timeline & side sheet ---------- */
-.re-imported-curves { height: 240px; }
+.re-imported-curves { flex-grow: 1; flex-basis: 0; min-height: 180px; }
+.kf-editor { flex-direction: column; }
+.kf-body { flex-direction: row; flex-grow: 1; flex-basis: 0; min-height: 110px; }
+#kf-tracks { min-width: 200px; }
+#kf-inspector { width: 230px; min-width: 210px; flex-grow: 0; flex-basis: auto; border-left-width: 1px; border-left-color: var(--re-border); }
+#kf-inspector .unity-label { white-space: normal; }
+.kf-timeline { flex-shrink: 0; background-color: var(--re-bg); min-height: 90px; }
+.kf-row { border-bottom-width: 1px; border-bottom-color: var(--re-border); overflow: hidden; }
+.kf-label { color: var(--re-muted); background-color: var(--re-panel); padding-left: 6px; overflow: hidden; -unity-text-align: middle-left; font-size: 10px; }
+.kf-label.is-selected { color: var(--re-accent); }
+.kf-key { color: rgb(151, 191, 222); -unity-text-align: middle-center; font-size: 15px; }
+.kf-key.is-selected { color: rgb(255, 207, 126); }
+.kf-ruler { color: var(--re-muted); font-size: 10px; overflow: hidden; }
+.kf-playhead { background-color: rgb(245, 176, 112); }
+#animation-editor { min-width: 200px; }
+#animation-editor .unity-base-field__label { min-width: 58px; }
+#keyframe-open { min-width: 180px; }
+#keyframe-open .unity-base-field__label { min-width: 65px; }
+#kf-add-shape .unity-base-field__label { min-width: 95px; }
 .re-timeline-body { flex-direction: row; height: 240px; margin-top: 4px; }
 .re-timeline-host {
  flex-grow: 1;
@@ -481,31 +499,49 @@
 .re-embedded { padding: 0; background-color: transparent; }
 .re-gesture-rule { flex-direction: row; align-items: center; min-height: 40px; padding: 2px 4px; border-radius: var(--md-shape-s); }
 .re-gesture-rule:hover { background-color: var(--md-state-hover); }
-.re-gesture-hand { width: 150px; flex-shrink: 0; }
-.re-gesture-hand > .unity-base-field__label { min-width: 46px; width: 46px; }
+.re-gesture-rule > .unity-base-field { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; }
 
-/* Hand lists: one row per hand shape. */
-.re-hands { flex-direction: row; flex-wrap: wrap; }
-.re-hand-column { flex-grow: 1; flex-basis: 0; min-width: 300px; margin: 0 4px; }
-.re-hand-title { -unity-font-style: bold; color: var(--md-primary); margin: 6px 4px 2px 4px; }
-.re-hand-row { flex-direction: row; align-items: center; min-height: 32px; padding: 0 4px; border-radius: var(--md-shape-s); }
-.re-hand-row:hover { background-color: var(--md-state-hover); }
-.re-hand-gesture { width: 104px; flex-shrink: 0; color: var(--md-on-surface-variant); }
-/* Base fields do not shrink by default; without the basis and shrink the field kept its 430px content width and pushed into the other hand. */
-.re-hand-row .unity-object-field { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; }
+.re-touch-diagram { width: 36px; height: 32px; flex-shrink: 0; }
+.re-touch-guide { flex-shrink: 0; margin: 2px 4px 4px 4px; }
+.re-touch-guide .unity-foldout__content { flex-shrink: 0; }
+.re-touch-poses { flex-direction: row; flex-wrap: wrap; flex-shrink: 0; margin: 4px 0; }
+.re-touch-pose {
+ flex-direction: row; align-items: center; flex-grow: 1; flex-shrink: 0; width: 24%; min-width: 244px; min-height: 68px;
+ margin: 2px; padding: 2px 4px; border-radius: var(--md-shape-s);
+ background-color: var(--md-surface-container-high);
+}
+.re-touch-pose .re-touch-diagram { width: 68px; height: 64px; margin-right: 4px; }
+.re-touch-pose-info { flex-grow: 1; flex-basis: 0; min-width: 0; }
+.re-touch-source { align-self: flex-start; }
 
 /* Combination table: rows = left hand, columns = right hand. */
-.re-matrix { margin: 4px 0; }
+.re-matrix-scroll { flex-shrink: 0; max-width: 100%; margin: 4px 0; }
+.re-matrix { min-width: 1088px; flex-grow: 1; }
 .re-matrix-row { flex-direction: row; }
-.re-matrix-corner, .re-matrix-head {
- flex-grow: 1; flex-basis: 0; min-width: 0;
- height: 26px; margin: 1px; padding: 0 4px;
+.re-matrix-top, .re-matrix-cell {
+ flex-grow: 1; flex-basis: 0; min-width: 110px;
+}
+.re-matrix-corner, .re-matrix-side {
+ width: 190px; flex-shrink: 0;
+}
+.re-matrix-corner, .re-matrix-head, .re-matrix-cell {
+ margin: 1px;
+}
+.re-matrix-corner, .re-matrix-name {
  font-size: 10px; color: var(--md-on-surface-variant);
  -unity-text-align: middle-center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
+.re-matrix-corner { -unity-text-align: middle-center; }
+.re-matrix-head { justify-content: center; padding: 2px 4px; border-radius: var(--md-shape-xs); overflow: hidden; }
+.re-matrix-top { height: 62px; border-top-width: 2px; border-top-color: var(--md-on-tertiary-container); background-color: var(--md-surface-container-high); }
+.re-matrix-side { height: 56px; border-left-width: 2px; border-left-color: var(--md-primary); background-color: var(--md-surface-container-high); }
+.re-matrix-heading-label, .re-matrix-assignment { flex-direction: row; align-items: center; }
+.re-matrix-heading-label .re-touch-diagram { width: 28px; height: 26px; }
+.re-matrix-name { flex-shrink: 1; margin-left: 2px; -unity-text-align: middle-left; }
+.re-matrix-assignment .unity-object-field { flex-grow: 1; flex-shrink: 1; flex-basis: 0; min-width: 0; }
+.re-matrix-assignment .re-matrix-clear { width: 18px; min-width: 18px; height: 18px; min-height: 18px; padding: 0; margin: 0; }
 .re-matrix-cell {
- flex-grow: 1; flex-basis: 0; min-width: 0;
- height: 26px; margin: 1px; padding: 0 4px;
+ height: 56px; padding: 0 4px;
  border-width: 0; border-radius: var(--md-shape-xs);
  font-size: 10px; -unity-text-align: middle-center;
  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
@@ -514,11 +550,19 @@
 .re-cell--default { background-color: var(--md-surface-container-high); color: var(--md-outline); }
 .re-cell--left { background-color: var(--md-primary-container); color: var(--md-on-primary-container); }
 .re-cell--right { background-color: var(--md-tertiary-container); color: var(--md-on-tertiary-container); }
-.re-cell--both { background-color: rgb(77, 61, 117); color: rgb(234, 221, 255); }
 .re-cell--choice { background-color: rgb(91, 67, 0); color: rgb(255, 223, 160); }
 .re-cell--unresolved { background-color: rgb(140, 29, 24); color: rgb(255, 218, 214); -unity-font-style: bold; }
 .re-legend { flex-direction: row; flex-wrap: wrap; margin: 2px 0 6px 0; }
 .re-legend-item { font-size: 10px; padding: 2px 8px; margin: 2px 6px 2px 0; border-radius: var(--md-shape-xs); }
+.re-gesture-preview {
+ position: absolute; padding: 4px 5px 5px 5px;
+ border-width: 1px; border-color: var(--md-outline); border-radius: var(--md-shape-s);
+ background-color: var(--md-surface-container-high);
+}
+.re-gesture-preview-title {
+ height: 22px; margin: 0; padding: 0 2px; -unity-text-align: middle-left;
+ overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
 
 /* ---------- Guide ---------- */
 .re-guide-card {
@@ -548,7 +592,7 @@
  */
 .re-lang-ja .re-brand, .re-lang-ja .re-rail-item.is-active, .re-lang-ja .re-title, .re-lang-ja .re-heading,
 .re-lang-ja .re-button--filled, .re-lang-ja .re-button--primary, .re-lang-ja .re-segment.is-active,
-.re-lang-ja .track-label.is-selected, .re-lang-ja .re-hand-title, .re-lang-ja .re-cell--unresolved,
+.re-lang-ja .track-label.is-selected, .re-lang-ja .re-cell--unresolved,
 .re-lang-ja #guide-title { -unity-font-style: normal; }
 .re-lang-ja .re-title, .re-lang-ja .re-heading { font-size: 14px; }
 

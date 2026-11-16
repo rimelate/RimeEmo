@@ -36,10 +36,17 @@ namespace RimeEmo.Editor
         internal static State Describe(RimeEmoProject project, GameObject avatar)
         {
             if (!project || !avatar || EditorUtility.IsPersistent(avatar)) return State.Unavailable;
+            var direct = RimeEmoDirectFx.Find(project, avatar);
+            if (direct)
+            {
+                string fingerprint = Fingerprint(project, true, RimeEmoFaceSync.Analyze(project, avatar));
+                return RimeEmoDirectFx.IsCurrent(project, avatar, direct, fingerprint) ? State.UpToDate : State.Stale;
+            }
             var applied = RimeEmoApply.AppliedController(project, avatar);
             if (!applied) return State.NotApplied;
             // An older build, a Replace-mode component from before, or a build never applied leaves the avatar behind.
-            if (applied != project.generatedFX || !RimeEmoApply.AppliedAsAppend(project, avatar) || string.IsNullOrEmpty(project.generatedFingerprint)) return State.Stale;
+            if (project.fxApplyMode != FxApplyMode.ModularAvatarAppend || applied != project.generatedFX
+                || !RimeEmoApply.AppliedAsAppend(project, avatar) || string.IsNullOrEmpty(project.generatedFingerprint)) return State.Stale;
             return project.generatedFingerprint == Fingerprint(project, true, RimeEmoFaceSync.Analyze(project, avatar)) ? State.UpToDate : State.Stale;
         }
 
@@ -57,8 +64,8 @@ namespace RimeEmo.Editor
             text.Append("override:").Append(project.overrideSourceGestureFaces).Append('\n');
             if (project.overrideSourceGestureFaces)
             {
-                string fxPath = project.sourceFX ? AssetDatabase.GetAssetPath(project.sourceFX) : "";
-                text.Append("fx:").Append(Id(project.sourceFX)).Append(':')
+                string fxPath = sync.baseFx ? AssetDatabase.GetAssetPath(sync.baseFx) : "";
+                text.Append("fx:").Append(Id(sync.baseFx)).Append(':')
                     .Append(string.IsNullOrEmpty(fxPath) ? "" : AssetDatabase.GetAssetDependencyHash(fxPath).ToString()).Append('\n');
             }
             text.Append("face:").Append(RimeEmoFace.Path(project)).Append('\n');

@@ -15,6 +15,7 @@ namespace RimeEmo.Editor
             if (mode == next) return;
             EndStaticGesture();
             retainedTimeline?.EndInteraction();
+            keyframeTimeline?.EndInteraction(); ResetKeyframeValue();
             PreviewMaterial(null);
             pointerMaterialRow = null;
             if (mode == 1) dynamicCursor = time; else staticCursor = time;

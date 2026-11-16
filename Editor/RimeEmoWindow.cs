@@ -54,6 +54,7 @@ namespace RimeEmo.Editor
 
         private void OnDisable()
         {
+            gesturePanel?.ReleaseHoverPreview();
             CancelAutoSplit();
             EndStaticGesture();
             RimeEmoLocalization.Changed -= LanguageChanged;
@@ -61,6 +62,7 @@ namespace RimeEmo.Editor
             EditorApplication.delayCall -= CheckUpdatesOnOpen;
             RimeEmoUpdates.Cancel();
             retainedTimeline?.EndInteraction();
+            keyframeTimeline?.EndInteraction();
             Undo.undoRedoPerformed -= Changed;
             RimeEmoClassificationWindow.ClassificationChanged -= ClassificationEdited;
             RimeEmoShapeGroups.Changed -= GroupSetEdited;
@@ -185,6 +187,7 @@ namespace RimeEmo.Editor
         {
             CancelAutoSplit();
             EndStaticGesture(false);
+            ResetKeyframeValue();
             if (importedDraft && EditorUtility.IsDirty(importedDraft)) hasUnsavedChanges = true;
             if (motion && !EditorUtility.IsPersistent(motion) && EditorUtility.IsDirty(motion)) hasUnsavedChanges = true;
             retainedTimeline?.EndInteraction();
@@ -257,7 +260,7 @@ namespace RimeEmo.Editor
             if (EditingDefaultFace) RefreshDefaultFace();
         }
 
-        private void OnLostFocus() { EndStaticGesture(); PreviewMaterial(null); retainedTimeline?.EndInteraction(); }
+        private void OnLostFocus() { gesturePanel?.ReleaseHoverPreview(); EndStaticGesture(); EndKeyframeValueGesture(); PreviewMaterial(null); retainedTimeline?.EndInteraction(); keyframeTimeline?.EndInteraction(); }
 
         private sealed class ShapeRow
         {

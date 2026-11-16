@@ -8,6 +8,7 @@ namespace RimeEmo.Editor
     public enum Interpolation { Linear, EaseInOut, Step }
     // Which hand wins when both hands make different assigned gestures. Manual keeps every overlap unresolved until chosen.
     public enum GesturePriority { Manual, Left, Right }
+    public enum FxApplyMode { ModularAvatarAppend = 0, CreateFx = 1, OverwriteFx = 2 }
 
     [Serializable]
     public sealed class ShapeEntry
@@ -28,6 +29,8 @@ namespace RimeEmo.Editor
         // Made with "New Expression": it starts with no curves (unset Shape Keys use Default Face), so it is an
         // expression even before any face curve exists. Imported clips without face curves stay excluded.
         public bool created;
+        // Keeps constant and empty keyframe animations in the motion editor when reopened.
+        public bool keyframeEdited;
     }
 
     [Serializable]
@@ -73,6 +76,8 @@ namespace RimeEmo.Editor
         // Off by default: RimeEmo writes only the Shape Keys its expressions use and leaves the rest to the avatar's FX.
         public bool overrideSourceGestureFaces;
         public GesturePriority gesturePriority;
+        public FxApplyMode fxApplyMode;
+        public RuntimeAnimatorController overwriteFX;
         public RuntimeAnimatorController generatedFX;
         public string generatedFolder;
         // Inputs of the last build, compared with the current ones to tell whether the avatar is behind.

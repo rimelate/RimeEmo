@@ -6,6 +6,8 @@ namespace RimeEmo.Editor
     {
         internal static readonly Dictionary<string, string> English = new Dictionary<string, string>
         {
+            { "カスタム / 混在", "Custom / Mixed" },
+            { " · 別の編集方式に未保存の変更あり", " · Unsaved changes in the other editing mode" },
             { "お問い合わせ", "Contact" },
             { "BOOTH（商品ページ）", "BOOTH (product page)" },
             { "作者のX", "Creator's X" },
@@ -28,29 +30,44 @@ namespace RimeEmo.Editor
             { "自動（割り当てと優先設定に従う）", "Auto (follow assignments and priority)" },
             { "個別に設定した組み合わせはありません。", "No individually set combinations." },
             { "割り当てを外す", "Clear assignment" },
+            { "Quest 3 / Touch Plus 操作ガイド", "Quest 3 / Touch Plus Controls" },
+            { "親指 {0}  /  トリガー {1}  /  グリップ {2}", "Thumb {0}  /  Trigger {1}  /  Grip {2}" },
+            { "ジェスチャーの基本状態。", "Default gesture state." },
+            { "触れる", "Touch" },
+            { "離す", "Off" },
+            { "押す", "Press" },
+            { "握る", "Squeeze" },
+            { "緩める", "Release" },
+            { "VRChatの標準操作を掲載しています。入力の割り当てやハンドトラッキングによって操作が変わります。", "These are the default VRChat controls. Input bindings and hand tracking can change how you make the gestures." },
+            { "VRChat公式の手の形ガイド", "Official VRChat hand pose guide" },
             { "左手の表情を使います。左手がNeutralのときは右手の表情を使います。", "Uses the left hand's expression. When the left hand is Neutral, the right hand's expression is used." },
             { "右手の表情を使います。右手がNeutralのときは左手の表情を使います。", "Uses the right hand's expression. When the right hand is Neutral, the left hand's expression is used." },
             { "両手の割り当てが重なる組み合わせを、表で1つずつ選びます。選ぶまでFXを生成できません。", "Choose each overlapping combination in the table. FX cannot be generated until every one is chosen." },
             { "左手の割り当て", "Left hand" },
             { "右手の割り当て", "Right hand" },
-            { "両手の組み合わせ", "Both hands" },
             { "個別に設定", "Set individually" },
-            { "両手の組み合わせはありません。通常は不要です。", "No both-hand combinations. Usually none are needed." },
+            { "全組み合わせの共通設定", "Shared assignment for all combinations" },
             { "1. 手の形に割り当てる", "1. Assign to hand shapes" },
-            { "手の形ごとに、素材一覧やProjectから表情・動きをドロップします。空欄の手の形はDefault Faceになります。", "Drop an expression or motion from the materials list or Project onto each hand shape. Empty shapes use Default Face." },
+            { "上の欄は右手、左の欄は左手です。表情・動きを各欄にドロップします。セルをクリックすると両手の組み合わせを設定できます。欄やセルにカーソルを置くと表情を確認できます。", "Drop expressions or motions onto the right-hand fields across the top or the left-hand fields down the side. Click a cell to set that combination. Hover over a field or cell to preview the expression." },
             { "左手", "Left hand" },
             { "右手", "Right hand" },
-            { "2. 両手で違う形をしたとき", "2. When the hands differ" },
             { "左手を優先", "Prefer left hand" },
             { "右手を優先", "Prefer right hand" },
             { "組み合わせごとに選ぶ", "Choose per combination" },
-            { "3. 結果を確認する", "3. Check the result" },
-            { "縦が左手、横が右手です。セルをクリックすると、その組み合わせだけ個別に設定できます。", "Rows are the left hand, columns the right hand. Click a cell to set that combination individually." },
+            { "右手 → / 左手 ↓", "Right hand → / Left hand ↓" },
             { "個別に設定した組み合わせ", "Individually set combinations" },
-            { "両手の組み合わせ（上級）", "Both-hand combinations (advanced)" },
-            { "＋ 組み合わせを追加", "＋ Add Combination" },
-            { "左右の手が決まった組み合わせのときだけ使う表情です。片手の割り当てより優先されます。", "Expressions used only for a specific left/right combination. They take precedence over one-hand assignments." },
-            { "4. アバターへ適用", "4. Apply to avatar" },
+            { "2. アバターへ適用", "2. Apply to avatar" },
+            { "FXの適用方法", "FX Apply Mode" },
+            { "Modular Avatarで追加", "Append with Modular Avatar" },
+            { "新しいFXに置き換え", "Replace with New FX" },
+            { "既存FXに追加して置き換え", "Append to Existing FX" },
+            { "上書き元FX", "FX to Copy" },
+            { "空欄の場合は、アバターの現在のFXを使います。", "When empty, uses the avatar's current FX." },
+            { "Modular AvatarのMerge Animatorを使い、既存FXの上にRimeEmoのGestureレイヤーを追加します。Avatar DescriptorのFX設定は変更しません。", "Adds RimeEmo's gesture layer above the existing FX with Modular Avatar's Merge Animator. The Avatar Descriptor's FX assignment stays unchanged." },
+            { "RimeEmoのGestureレイヤー1枚だけのFXを作成し、Avatar Descriptorに割り当てます。", "Creates an FX containing only RimeEmo's gesture layer and assigns it in the Avatar Descriptor." },
+            { "指定したFXをコピーし、RimeEmoのGestureレイヤーを加えたFXをAvatar Descriptorに割り当てます。空欄ではアバターの現在のFXを使います。再適用時は元FXの最新内容からコピーします。", "Copies the selected FX, adds RimeEmo's gesture layer, and assigns the combined copy in the Avatar Descriptor. When the field is empty, it uses the avatar's current FX. Reapplying copies the latest contents of the base FX." },
+            { "生成するFXはRimeEmoのGestureレイヤーを含みます。書き込むのは、RimeEmoの表情がDefault Faceから変えるShape Keyだけです。", "The generated FX contains the RimeEmo gesture layer. It writes only the Shape Keys changed by RimeEmo expressions from Default Face." },
+            { "適用を解除し、元のFX設定に戻しました。", "Removed RimeEmo and restored the previous FX settings." },
             { "このアバターはまだセットアップされていません。下の「新規セットアップ」を押してください。", "This avatar is not set up yet. Click New Setup below." },
             { "上のAvatar欄にSceneのアバターを指定してください。設定済みなら自動で読み込みます。", "Specify a scene avatar in the Avatar field above. Existing settings load automatically." },
             { "上のAvatar欄にSceneのアバターを指定します。HierarchyのRimeEmoボタンから開くと自動で指定されます。初めてのアバターは、左下の設定で新規セットアップします。", "Specify a scene avatar in the Avatar field at the top. Opening from the RimeEmo button in the Hierarchy fills it in. Set up a new avatar from Settings at the bottom left." },
@@ -209,6 +226,13 @@ namespace RimeEmo.Editor
             { "どの動きからも使われていない表情コピーと、Sceneから参照されていない古いFX生成物をゴミ箱へ移動します。", "Move material copies no motion uses and old FX builds no scene references to the trash." },
             { "端: トリミング · 中央: 移動 · 境界のつまみ: 保持・移行 · S: 分割 · ホイール: 拡大 · Shift+ホイール: 横移動", "Edges: trim · Center: move · Boundary handle: hold / transition · S: split · Wheel: zoom · Shift+wheel: scroll" },
             { "自動分割", "Auto Split" },
+            { "Shape Keyを追加または選択してください。", "Add or select a Shape Key." },
+            { "カーブを表示", "Show curve" }, { "キーありのみ", "Keys only" }, { "キーの値", "Key value" },
+            { "キーフレーム", "Keyframes" }, { "キーフレームの変更を保存しますか？", "Save keyframe changes?" },
+            { "元の素材や部位別の動きには上書きできません。別名で保存してください。", "Cannot overwrite the original material or part-based motion. Save as a new file." },
+            { "現在時刻の値", "Value at current time" },
+            { "時刻を選び、値を調整してキーを追加。Ctrl+クリックで複数選択、ドラッグで移動。", "Choose a time and value to add a key. Ctrl-click to select multiple keys; drag to move." },
+            { "自動キー登録", "Auto key" }, { "選択キー: {0}", "Selected keys: {0}" }, { "新しいキーフレーム", "New Keyframes" },
             { "保持（秒）", "Hold (sec)" },
             { "移行（秒）", "Transition (sec)" },
             { "移行の補間", "Transition interpolation" },
@@ -352,6 +376,18 @@ namespace RimeEmo.Editor
             , { "このアバターは口パクをFXで動かしています。オンにすると、この表情の間は口パクのShape KeyをDefault Faceの値に固定します。", "This avatar's lip sync runs in its FX. With this on, its lip sync Shape Keys are held at Default Face while this expression shows." }
             , { "表情固定", "Lock Face" }
             , { "表情を選ぶ", "Choose Expression" }
+            , { "Avatar DescriptorのPlayable Layersを開いてFXスロットを初期化してください。", "Open Playable Layers in the Avatar Descriptor and initialize the FX slot." }
+            , { "上書きには保存済みのAnimator Controllerを指定してください。", "Specify a saved Animator Controller to append to." }
+            , { "上書き元にはRimeEmoの生成FX以外を指定してください。", "Choose an FX other than one generated by RimeEmo as the base." }
+            , { "適用中の生成アセットが編集されています。編集内容を元のアセットに移すか、適用を解除してからやり直してください。", "An applied generated asset was edited. Move those edits to the source asset or remove the application before applying again." }
+            , { "別のRimeEmo設定の直接適用を解除してから適用してください。", "Remove the direct application from the other RimeEmo project before applying." }
+            , { "Avatar DescriptorのExpressions設定に対応していません。", "The Avatar Descriptor's Expressions settings are unsupported." }
+            , { "Expressions Menuのルートに空きがありません。項目を1つ移動してから適用してください。", "The Expressions Menu root is full. Move one item before applying." }
+            , { "Expressions Parametersのパラメーター型が一致しません: ", "Expressions Parameters has a parameter with the wrong type: " }
+            , { "Expressions Parametersの同期容量が足りません。", "There is not enough synced capacity in Expressions Parameters." }
+            , { "FXのパラメーター型が一致しません: ", "The FX parameter has the wrong type: " }
+            , { "FXをコピーできませんでした。", "Could not copy the FX controller." }
+            , { "次の表情", "Next Expressions" }
         };
     }
 }

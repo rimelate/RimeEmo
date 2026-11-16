@@ -86,7 +86,23 @@ namespace RimeEmo.Editor
                 page = 0; // Setup done: continue straight to editing.
             });
             Button("cleanup", () => RimeEmoCleanup.Run(project, motion));
-            Button("new-motion", () => { if (FinishDraft()) ReplaceDraft(RimeEmoDrafts.Create(project)); });
+            Button("new-motion", NewAnimationDraft);
+            var animationEditor = UI<DropdownField>("animation-editor");
+            animationEditor.choices = new System.Collections.Generic.List<string> { RimeEmoLocalization.T("部位別キュー"), RimeEmoLocalization.T("キーフレーム") };
+            animationEditor.RegisterValueChangedCallback(e => { if (e.newValue == animationEditor.value) Run(() => SetAnimationEditor(animationEditor.index)); });
+            Button("queue-to-keyframes", CopyQueueToKeyframes);
+            var keyframeOpen = UI<ObjectField>("keyframe-open"); keyframeOpen.objectType = typeof(AnimationClip); keyframeOpen.allowSceneObjects = false;
+            keyframeOpen.RegisterValueChangedCallback(e => Run(() =>
+            {
+                var clip = e.newValue as AnimationClip; if (!clip) return;
+                try
+                {
+                    string rejection = RimeEmoClipClassification.Rejection(project, clip);
+                    if (rejection != null) { ShowNotification(new GUIContent(rejection)); return; }
+                    OpenKeyframeClip(clip);
+                }
+                finally { keyframeOpen.SetValueWithoutNotify(null); }
+            }));
             Button("save-as", () => SaveDraftAs(true));
             Button("capture-frame", CaptureCurrentFrame);
             Button("split-queue", SplitSelectedQueues);
@@ -98,7 +114,7 @@ namespace RimeEmo.Editor
             Button("previous", () => { JumpKey(-1); SyncToolkitTime(); RequestToolkitPreview(); });
             Button("next", () => { JumpKey(1); SyncToolkitTime(); RequestToolkitPreview(); });
             Button("add", () => ShowAddKeyMenu(activeTrack, time));
-            Button("fit", () => retainedTimeline.Fit());
+            Button("fit", () => { if (ImportedEditing) keyframeTimeline?.Fit(); else retainedTimeline.Fit(); });
             Button("default-preview", () => { showDefault = true; RequestToolkitPreview(); });
             Button("motion-preview", () => { showDefault = false; RequestToolkitPreview(); });
             Button("reload-preview", RefreshAvatar);
@@ -128,7 +144,7 @@ namespace RimeEmo.Editor
                         InvalidateApplyState(); RefreshTracking();
                     }));
             }
-            UI<Toggle>("snap").RegisterValueChangedCallback(e => { frameSnap = e.newValue; retainedTimeline.FrameSnap = frameSnap; });
+            UI<Toggle>("snap").RegisterValueChangedCallback(e => { frameSnap = e.newValue; retainedTimeline.FrameSnap = frameSnap; if (keyframeTimeline != null) keyframeTimeline.FrameSnap = frameSnap; });
             UI<Toggle>("magnet").RegisterValueChangedCallback(e => { cueSnap = e.newValue; retainedTimeline.CueSnap = cueSnap; });
             UI<FloatField>("time").RegisterValueChangedCallback(e => { time = SafeTime(e.newValue); playing = false; showDefault = false; SyncToolkitTime(); RequestToolkitPreview(); });
             UI<FloatField>("time").formatString = "0.###"; // Frame times like 13/60 otherwise read 0.216666.
@@ -206,11 +222,10 @@ namespace RimeEmo.Editor
         private void ShowPage(int next)
         {
             EndStaticGesture(); retainedTimeline?.EndInteraction(); PreviewMaterial(null);
+            if (next != 1) gesturePanel?.ReleaseHoverPreview();
             playing = false; page = next; toolkitDirty = true;
             if (next == 1 && gesturePanel != null)
             {
-                // "＋ 割り当て" starts from what is being edited.
-                gesturePanel.InitialClip = mode == 0 ? selected : ImportedEditing ? importedTarget : motion ? motion.animationClip : null;
                 gesturePanel.ClearStatus(); gesturePanel.MarkDirty();
             }
         }
@@ -266,8 +281,11 @@ namespace RimeEmo.Editor
             UI<VisualElement>("imported-curves").style.display = ImportedEditing ? DisplayStyle.Flex : DisplayStyle.None;
             RefreshImportedCurveHost(dynamic && ImportedEditing);
             UI<Label>("block-hint").style.display = ImportedEditing ? DisplayStyle.None : DisplayStyle.Flex;
-            foreach (string id in new[] { "previous", "next", "add", "fit", "snap", "magnet" })
+            foreach (string id in new[] { "add", "magnet", "split-queue" })
                 UI<VisualElement>(id).style.display = ImportedEditing ? DisplayStyle.None : DisplayStyle.Flex;
+            UI<DropdownField>("animation-editor").SetValueWithoutNotify(RimeEmoLocalization.T(keyframeMode ? "キーフレーム" : "部位別キュー"));
+            UI<Button>("queue-to-keyframes").SetEnabled(motion && motion.project == project && motion.tracks.Any(t => t.states.Count > 0));
+            UI<ObjectField>("keyframe-open").style.display = ImportedEditing ? DisplayStyle.Flex : DisplayStyle.None;
             UI<VisualElement>("motion-controls").style.display = dynamic && valid ? DisplayStyle.Flex : DisplayStyle.None;
             UI<Button>("capture-frame").SetEnabled(valid);
             UI<Button>("save").SetEnabled(shown == 0 && dynamic ? valid : project != null);
@@ -275,7 +293,12 @@ namespace RimeEmo.Editor
             SetButtonCaption(UI<Button>("motion-preview"), RimeEmoLocalization.T(dynamic ? "編集中の動き" : "編集中の表情"));
             UI<Button>("cleanup").SetEnabled(project);
             if (shown == 2) RefreshShapeGroupSettings();
-            UI<Label>("motion-status").text = valid ? (ImportedEditing ? (importedTarget ? RimeEmoLocalization.T("取り込んだ動き") + ": " + importedTarget.name : RimeEmoLocalization.T("未保存のアニメーション")) : motion.animationClip ? RimeEmoLocalization.T("保存先: ") + motion.animationClip.name : RimeEmoLocalization.T("未保存のアニメーション")) + (hasUnsavedChanges ? RimeEmoLocalization.T(" · 変更あり") : "") : "";
+            bool activeDirty = ImportedEditing ? KeyframeDraftDirty : QueueDraftDirty;
+            bool parkedDirty = ImportedEditing ? QueueDraftDirty : KeyframeDraftDirty;
+            var savedClip = ImportedEditing ? importedTarget : motion ? motion.animationClip : null;
+            UI<Label>("motion-status").text = valid ? (savedClip ? RimeEmoLocalization.T("保存先: ") + savedClip.name : RimeEmoLocalization.T("未保存のアニメーション"))
+                + (activeDirty ? RimeEmoLocalization.T(" · 変更あり") : "")
+                + (parkedDirty ? RimeEmoLocalization.T(" · 別の編集方式に未保存の変更あり") : "") : "";
             var notice = UI<Label>("notice");
             notice.text = !project ? (avatar ? RimeEmoLocalization.T("このアバターはまだセットアップされていません。下の「新規セットアップ」を押してください。") : RimeEmoLocalization.T("上のAvatar欄にSceneのアバターを指定してください。設定済みなら自動で読み込みます。"))
                 : !avatar ? RimeEmoLocalization.T("Avatarを指定するとプレビューできます。") : "";
@@ -289,9 +312,9 @@ namespace RimeEmo.Editor
             // The menu shows each mesh with its Shape Key count; a full-width slash keeps nested paths from opening submenus.
             face.formatListItemCallback = path => path == null ? "" : RimeEmoLocalization.MenuText(path) + "  (" + (faceShapeCounts.TryGetValue(path, out int count) ? count : 0) + ")";
             face.SetValueWithoutNotify(project ? RimeEmoFace.Path(project) : "");
-            bool changedMotion = retainedTimeline.Motion != (valid ? motion : null);
+            bool changedMotion = retainedTimeline.Motion != (valid && !ImportedEditing ? motion : null);
             if (changedMotion) retainedTimeline.SelectedStates.Clear();
-            retainedTimeline.Motion = valid ? motion : null; retainedTimeline.ActiveTrack = activeTrack; retainedTimeline.ActiveState = activeState;
+            retainedTimeline.Motion = valid && !ImportedEditing ? motion : null; retainedTimeline.ActiveTrack = activeTrack; retainedTimeline.ActiveState = activeState;
             retainedTimeline.TransitionSelected = transitionSelected; retainedTimeline.FrameSnap = frameSnap; retainedTimeline.CueSnap = cueSnap;
             retainedTimeline.Refresh();
             if (changedMotion) retainedTimeline.Fit();
@@ -339,6 +362,7 @@ namespace RimeEmo.Editor
         {
             if (toolkitRoot == null) return;
             retainedTimeline.SetTime(time); UI<FloatField>("time").SetValueWithoutNotify(time);
+            SyncKeyframeTime();
             RefreshQueueButtons();
             UI<Label>("preview-time").text = hoveredMaterial ? RimeEmoLocalization.T("素材プレビュー · ") + hoveredMaterial.name : mode == 1 ? time.ToString("0.###") + RimeEmoLocalization.T(" 秒") : selected ? selected.name : EditingDefaultFace ? "Default Face" : RimeEmoLocalization.T("表情を選択してください");
             RimeEmoIcons.SetPlayback(UI<Button>("play"), playing);
@@ -379,6 +403,7 @@ namespace RimeEmo.Editor
         {
             if (mode != 1 || (!ImportedEditing && (!motion || motion.project != project))) return;
             retainedTimeline?.EndInteraction();
+            keyframeTimeline?.EndInteraction(); ResetKeyframeValue();
             bool start = !playing;
             PreviewMaterial(null);
             showDefault = false;

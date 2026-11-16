@@ -42,6 +42,9 @@ namespace RimeEmo.Editor
                 RimeEmoTimingUIChecks.Run();
                 RimeEmoMaterialChecks.Run();
                 RimeEmoShapeGroupChecks.Run();
+                RimeEmoKeyframeChecks.Run();
+                RimeEmoKeyframeStorageChecks.Run();
+                RimeEmoKeyframeUIChecks.Run();
                 Debug.Log("RimeEmo core checks passed.");
             }
             catch (Exception e)
@@ -646,7 +649,10 @@ namespace RimeEmo.Editor
                 Assert(shapeList.worldBound.height > 80, "static shape list has no usable height");
                 Assert(shapeList.itemsSource.Count == 2, "single shape list did not show included and unset shapes");
                 Assert(Included(shapeList.itemsSource[0]) && !Included(shapeList.itemsSource[1]), "shape rows lost their clip state");
-                Assert(root.Query<IMGUIContainer>().ToList().Count == 1, "static editor still has an IMGUI UI bridge");
+                var editorPage = root.Q<VisualElement>("editor-page");
+                var imgui = editorPage.Query<IMGUIContainer>().ToList();
+                Assert(imgui.Count == 1 && imgui[0].parent == editorPage.Q<VisualElement>("preview-host"),
+                    "only the avatar renderer should use IMGUI on the editor page");
                 var slider = root.Q<Slider>("shape-value"); Assert(slider != null, "static slider not realized");
                 slider.value = 65;
                 AssertNear(RimeEmoClips.Value(clip, shape), 65, "static slider did not update clip");

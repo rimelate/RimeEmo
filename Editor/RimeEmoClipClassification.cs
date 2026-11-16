@@ -12,6 +12,7 @@ namespace RimeEmo.Editor
         internal static RimeEmoClipKind Classify(RimeEmoProject project, AnimationClip clip)
         {
             if (!project || !clip) return RimeEmoClipKind.Excluded;
+            if (RimeEmoKeyframeClips.Owns(project, clip)) return RimeEmoClipKind.Dynamic;
             string path = RimeEmoFace.Path(project);
             bool found = false;
             foreach (var binding in AnimationUtility.GetCurveBindings(clip))

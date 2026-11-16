@@ -16,6 +16,7 @@ namespace RimeEmo.Editor
     internal sealed class RimeEmoFaceSync
     {
         internal bool vrcBlink = true, vrcLipSync = true;
+        internal AnimatorController baseFx;
         // The blink of the source FX's neutral face: its moving eye Shape Key curves, one loop long.
         internal AnimationClip blinkClip;
         internal EditorCurveBinding[] blinkBindings = Array.Empty<EditorCurveBinding>();
@@ -39,13 +40,16 @@ namespace RimeEmo.Editor
         {
             if (!avatar && project) avatar = RimeEmoAvatarStorage.FindAvatar(project);
             RimeEmoFaceMenu.TrackingSupport(avatar, out bool blink, out bool lipSync);
-            return Analyze(project, blink, lipSync);
+            return Analyze(project, RimeEmoDirectFx.EffectiveBaseFx(project, avatar), blink, lipSync);
         }
 
         internal static RimeEmoFaceSync Analyze(RimeEmoProject project, bool vrcBlink, bool vrcLipSync)
+            => Analyze(project, project ? project.sourceFX as AnimatorController : null, vrcBlink, vrcLipSync);
+
+        private static RimeEmoFaceSync Analyze(RimeEmoProject project, AnimatorController fx, bool vrcBlink, bool vrcLipSync)
         {
-            var sync = new RimeEmoFaceSync { vrcBlink = vrcBlink, vrcLipSync = vrcLipSync };
-            if (!project || !(project.sourceFX is AnimatorController fx) || (vrcBlink && vrcLipSync)) return sync;
+            var sync = new RimeEmoFaceSync { vrcBlink = vrcBlink, vrcLipSync = vrcLipSync, baseFx = fx };
+            if (!project || !fx || (vrcBlink && vrcLipSync)) return sync;
             sync.face = RimeEmoFace.Path(project);
             sync.defaults = RimeEmoFace.Shapes(project).GroupBy(s => s.shape).ToDictionary(g => g.Key, g => g.First().defaultValue);
             if (!vrcBlink) sync.FindBlink(project, fx);

@@ -276,6 +276,7 @@ namespace RimeEmo.Editor
                 TestMenuAndTracking(project, sourceClip);
                 TestSourceGestureOverride(project, source);
                 TestSettingsWindows(project);
+                TestDirectFx(project, source, root);
             }
             finally
             {
@@ -283,6 +284,225 @@ namespace RimeEmo.Editor
                 if (first != null && AssetDatabase.IsValidFolder(first)) AssetDatabase.DeleteAsset(first);
                 AssetDatabase.DeleteAsset(root);
                 AssetDatabase.Refresh();
+            }
+        }
+
+        static void TestDirectFx(RimeEmoProject project, AnimatorController source, string root)
+        {
+            Type Find(string name) => AppDomain.CurrentDomain.GetAssemblies().Select(a => a.GetType(name)).FirstOrDefault(t => t != null);
+            var descriptorType = Find("VRC.SDK3.Avatars.Components.VRCAvatarDescriptor");
+            if (descriptorType == null) return;
+            var avatar = new GameObject("Direct FX Check");
+            var mesh = new Mesh { vertices = new[] { Vector3.zero } };
+            GameObject prefabInstance = null;
+            try
+            {
+                var face = new GameObject("Face");
+                face.transform.SetParent(avatar.transform, false);
+                foreach (var shape in project.shapes)
+                    mesh.AddBlendShapeFrame(shape.shape, 100, new[] { Vector3.one }, new Vector3[1], new Vector3[1]);
+                face.AddComponent<SkinnedMeshRenderer>().sharedMesh = mesh;
+                var descriptor = avatar.AddComponent(descriptorType);
+                var sourceLayers = source.layers.Length;
+                // A user's own layer can already have this name.
+                var layers = source.layers;
+                layers[0].name = RimeEmoBuild.LayerName;
+                source.layers = layers;
+                foreach (var layer in source.layers)
+                    foreach (var state in RimeEmoBuild.States(layer.stateMachine))
+                    {
+                        state.writeDefaultValues = false;
+                        EditorUtility.SetDirty(state);
+                    }
+                AssetDatabase.SaveAssets();
+
+                Assert(project.fxApplyMode == FxApplyMode.ModularAvatarAppend, "default apply mode must stay MA Append");
+                project.fxApplyMode = FxApplyMode.CreateFx;
+                project.expressionMenu = true;
+                for (int i = 0; i < 10; i++) RimeEmoAssets.NewDefault(project);
+
+                var nativeMenu = ScriptableObject.CreateInstance(Find("VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionsMenu"));
+                var nativeParams = ScriptableObject.CreateInstance(Find("VRC.SDK3.Avatars.ScriptableObjects.VRCExpressionParameters"));
+                AssetDatabase.CreateAsset(nativeMenu, root + "/User Menu.asset");
+                AssetDatabase.CreateAsset(nativeParams, root + "/User Parameters.asset");
+                using (var serialized = new SerializedObject(nativeMenu))
+                {
+                    var controls = serialized.FindProperty("controls");
+                    controls.arraySize = 1;
+                    controls.GetArrayElementAtIndex(0).FindPropertyRelative("name").stringValue = "User Control";
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                }
+                using (var serialized = new SerializedObject(nativeParams))
+                {
+                    var entries = serialized.FindProperty("parameters");
+                    entries.arraySize = 1;
+                    var entry = entries.GetArrayElementAtIndex(0);
+                    entry.FindPropertyRelative("name").stringValue = "User Parameter";
+                    entry.FindPropertyRelative("saved").boolValue = true;
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                }
+                using (var serialized = new SerializedObject(descriptor))
+                {
+                    serialized.FindProperty("customExpressions").boolValue = true;
+                    serialized.FindProperty("expressionsMenu").objectReferenceValue = nativeMenu;
+                    serialized.FindProperty("expressionParameters").objectReferenceValue = nativeParams;
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                }
+                AssetDatabase.SaveAssets();
+
+                RimeEmoApply.Apply(project, avatar, false);
+                var created = RimeEmoDirectFx.Find(project, avatar);
+                var directController = RimeEmoAssets.FindFX(avatar) as AnimatorController;
+                Assert(created && created.CompareTag("EditorOnly") && directController && directController == created.appliedFx
+                    && directController.layers.Length == 1 && directController != project.generatedFX, "create did not install an owned direct FX");
+                Assert(RimeEmoBuildState.Describe(project, avatar) == RimeEmoBuildState.State.UpToDate, "new direct application is stale");
+                Assert(created.appliedMenu != nativeMenu && created.appliedParameters != nativeParams, "native assets were not copied");
+                using (var serialized = new SerializedObject(created.appliedMenu))
+                {
+                    var controls = serialized.FindProperty("controls");
+                    Assert(controls.arraySize == 2 && controls.GetArrayElementAtIndex(0).FindPropertyRelative("name").stringValue == "User Control",
+                        "native root controls were lost or duplicated");
+                }
+                using (var serialized = new SerializedObject(created.appliedParameters))
+                {
+                    var entries = serialized.FindProperty("parameters");
+                    Assert(entries.arraySize == 3 && entries.GetArrayElementAtIndex(0).FindPropertyRelative("saved").boolValue,
+                        "native parameters and settings were not preserved");
+                }
+                Assert(created.submenus.Length >= 3, "expression menu was not paginated");
+                foreach (var menu in created.submenus)
+                    using (var serialized = new SerializedObject(menu))
+                        Assert(serialized.FindProperty("controls").arraySize <= 8, "a generated expression page exceeded the SDK limit");
+                RimeEmoApply.Apply(project, avatar, false);
+                Assert(RimeEmoDirectFx.Find(project, avatar) == created, "unchanged reapply replaced the direct output");
+
+                project.fxApplyMode = FxApplyMode.OverwriteFx;
+                project.overwriteFX = source;
+                project.overrideSourceGestureFaces = true;
+                var originalParameters = source.parameters;
+                var conflicting = source.parameters;
+                conflicting.Single(p => p.name == "GestureLeft").type = AnimatorControllerParameterType.Float;
+                source.parameters = conflicting;
+                var errors = RimeEmoApply.Validate(project, avatar);
+                Assert(errors.Any(error => error.Contains("GestureLeft")), "controller parameter type conflict was not found: "
+                    + string.Join(" / ", errors) + " | " + AssetDatabase.GetAssetPath(source) + " | "
+                    + string.Join(", ", source.parameters.Select(p => p.name + "=" + p.type)));
+                source.parameters = originalParameters;
+                AssetDatabase.SaveAssets();
+                RimeEmoApply.Apply(project, avatar, false);
+                var installed = RimeEmoAssets.FindFX(avatar) as AnimatorController;
+                Assert(installed && installed != source && installed.layers.Length == sourceLayers + 1 && source.layers.Length == sourceLayers
+                    && installed.parameters.Any(p => p.name == "Unrelated"), "overwrite lost unrelated source layers or parameters");
+                var owned = installed.layers.Last();
+                Assert(owned.name != installed.layers[0].name && owned.stateMachine.states.Length >= 64
+                    && owned.stateMachine.states.All(s => s.state.motion && !s.state.writeDefaultValues)
+                    && owned.stateMachine.anyStateTransitions.All(t => t.destinationState
+                        && AssetDatabase.GetAssetPath(t.destinationState) == AssetDatabase.GetAssetPath(installed)),
+                    "generated graph was not copied independently or did not match the target Write Defaults");
+
+                source.AddParameter("Added to Source", AnimatorControllerParameterType.Bool);
+                EditorUtility.SetDirty(source);
+                Assert(RimeEmoBuildState.Describe(project, avatar) == RimeEmoBuildState.State.Stale, "unsaved source FX edit did not invalidate the application");
+                RimeEmoApply.Apply(project, avatar, false);
+                installed = RimeEmoAssets.FindFX(avatar) as AnimatorController;
+                Assert(installed && installed.layers.Length == sourceLayers + 1 && installed.parameters.Any(p => p.name == "Added to Source"),
+                    "overwrite reapply duplicated the generated layer or missed a source edit");
+                Assert(RimeEmoBuildState.Describe(project, avatar) == RimeEmoBuildState.State.UpToDate, "saving the source during the build left the result stale");
+
+                var editedState = installed.layers.Last().stateMachine.states[0].state;
+                editedState.name = "User edited state";
+                EditorUtility.SetDirty(editedState);
+                AssetDatabase.SaveAssets();
+                Assert(RimeEmoBuildState.Describe(project, avatar) == RimeEmoBuildState.State.Stale && RimeEmoApply.Validate(project, avatar).Count != 0,
+                    "manual edit to the installed FX was not protected");
+                RimeEmoApply.Remove(project, avatar);
+                Assert(!RimeEmoApply.HasApplied(project, avatar) && !RimeEmoAssets.FindFX(avatar) && installed,
+                    "remove did not restore the default FX or retained ownership");
+                using (var serialized = new SerializedObject(descriptor))
+                    Assert(serialized.FindProperty("expressionsMenu").objectReferenceValue == nativeMenu
+                        && serialized.FindProperty("expressionParameters").objectReferenceValue == nativeParams,
+                        "remove did not restore native expression references");
+
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert(RimeEmoDirectFx.Find(project, avatar) && RimeEmoAssets.FindFX(avatar) == installed,
+                    "Undo of remove did not restore the direct installation");
+                RimeEmoApply.Remove(project, avatar);
+
+                // The blank overwrite field uses the existing customized descriptor FX. Use a distinct slot mask
+                // and disable custom expressions while leaving its serialized menu and parameter references set.
+                var mask = new AvatarMask { name = "Descriptor Mask" };
+                AssetDatabase.CreateAsset(mask, root + "/Descriptor Mask.mask");
+                SerializedProperty Fx(SerializedObject serialized)
+                {
+                    var slots = serialized.FindProperty("baseAnimationLayers");
+                    for (int i = 0; i < slots.arraySize; i++)
+                    {
+                        var slot = slots.GetArrayElementAtIndex(i);
+                        var type = slot.FindPropertyRelative("type");
+                        if (type.enumNames[type.enumValueIndex] == "FX") return slot;
+                    }
+                    throw new InvalidOperationException("FX slot was not initialized");
+                }
+                using (var serialized = new SerializedObject(descriptor))
+                {
+                    serialized.FindProperty("customizeAnimationLayers").boolValue = true;
+                    var fx = Fx(serialized);
+                    fx.FindPropertyRelative("animatorController").objectReferenceValue = source;
+                    fx.FindPropertyRelative("mask").objectReferenceValue = mask;
+                    fx.FindPropertyRelative("isDefault").boolValue = false;
+                    serialized.FindProperty("customExpressions").boolValue = false;
+                    serialized.ApplyModifiedPropertiesWithoutUndo();
+                }
+                project.overwriteFX = null;
+                RimeEmoApply.Apply(project, avatar, false);
+                var fallback = RimeEmoDirectFx.Find(project, avatar);
+                Assert(fallback && fallback.baseFx == source && fallback.previousFx == source && fallback.appliedMask == mask,
+                    "current descriptor FX or its mask was not preserved as the overwrite basis");
+                using (var serialized = new SerializedObject(fallback.appliedParameters))
+                {
+                    var entries = serialized.FindProperty("parameters");
+                    Assert(entries.arraySize == 5 && entries.GetArrayElementAtIndex(0).FindPropertyRelative("name").stringValue == "VRCEmote",
+                        "default SDK parameters were not preserved when activating custom expressions");
+                }
+                using (var serialized = new SerializedObject(fallback.appliedMenu))
+                    Assert(serialized.FindProperty("controls").arraySize == 1, "inactive menu entries were added to the new custom menu");
+
+                // The record is part of the prefab after saving. Reapply on an instance should reuse it.
+                AssetDatabase.CreateAsset(mesh, root + "/Face Mesh.asset");
+                var prefab = PrefabUtility.SaveAsPrefabAsset(avatar, root + "/Direct Avatar.prefab");
+                prefabInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                var inherited = RimeEmoDirectFx.Find(project, prefabInstance);
+                project.expressionMenu = false;
+                RimeEmoApply.Apply(project, prefabInstance, false);
+                var reapplied = RimeEmoDirectFx.Find(project, prefabInstance);
+                Assert(reapplied && reapplied == inherited && !reapplied.appliedMenu && !reapplied.appliedParameters,
+                    "reapply did not reuse the inherited record with a disabled expression menu");
+                RimeEmoApply.Remove(project, prefabInstance);
+                Assert(!RimeEmoApply.HasApplied(project, prefabInstance) && RimeEmoAssets.FindFX(prefabInstance) == source,
+                    "removing an inherited direct installation did not restore the avatar");
+
+                if (RimeEmoApply.MergeType != null)
+                {
+                    project.fxApplyMode = FxApplyMode.ModularAvatarAppend;
+                    RimeEmoApply.Apply(project, avatar, false);
+                    Assert(!RimeEmoDirectFx.Find(project, avatar) && RimeEmoApply.AppliedAsAppend(project, avatar)
+                        && RimeEmoAssets.FindFX(avatar) == source, "switching to MA did not restore the descriptor");
+                    project.fxApplyMode = FxApplyMode.OverwriteFx;
+                    RimeEmoApply.Apply(project, avatar, false);
+                    Assert(RimeEmoDirectFx.Find(project, avatar) && !RimeEmoApply.FindApplied(project, avatar),
+                        "switching from MA left a second application");
+                }
+                RimeEmoApply.Remove(project, avatar);
+                using (var serialized = new SerializedObject(descriptor))
+                    Assert(Fx(serialized).FindPropertyRelative("mask").objectReferenceValue == mask && RimeEmoAssets.FindFX(avatar) == source
+                        && !serialized.FindProperty("customExpressions").boolValue, "remove did not restore the original descriptor settings");
+            }
+            finally
+            {
+                if (prefabInstance) UnityEngine.Object.DestroyImmediate(prefabInstance);
+                UnityEngine.Object.DestroyImmediate(avatar);
+                if (mesh && !EditorUtility.IsPersistent(mesh)) UnityEngine.Object.DestroyImmediate(mesh);
             }
         }
 
@@ -488,10 +708,56 @@ namespace RimeEmo.Editor
                 var root = gesture.rootVisualElement;
                 Assert(RimeEmoBuild.Validate(project).Count == 0, "valid project reported build errors");
                 Assert(!root.Q<UnityEngine.UIElements.Button>("fx-apply").enabledSelf, "apply enabled without avatar");
-                Assert(root.Q<UnityEngine.UIElements.VisualElement>("rules").childCount == 2, "gesture rule UI did not bind");
+                Assert(root.Q<VisualElement>("rule-add") == null && root.Q<VisualElement>("rules") == null, "separate both-hand assignment UI is still present");
+                Assert(root.Q<VisualElement>("conflicts").Query<DropdownField>().ToList().Count == 2, "existing exact rules did not appear in the individual assignments");
+                Assert(root.Q<VisualElement>("common-assignments").childCount == 0, "an empty common assignment is editable");
+                Assert(root.Q<VisualElement>("gesture-legend").Query<Label>(className: "re-cell--choice").ToList().Count == 1, "individual assignments have more than one legend entry");
+                var hover = root.Q<VisualElement>("gesture-hover-preview");
+                Assert(hover != null && hover.style.display.value == DisplayStyle.None && hover.pickingMode == PickingMode.Ignore
+                    && hover.Children().All(child => child.pickingMode == PickingMode.Ignore),
+                    "the Gesture preview can intercept assignment input or starts visible without a hovered target");
+                TestTouchGestureGuide(root);
+                var previousMode = project.fxApplyMode;
+                var previousOverwrite = project.overwriteFX;
+                var temporaryController = new AnimatorController { name = "UI Mode Check" };
+                try
+                {
+                    var modeField = root.Q<DropdownField>("fx-apply-mode");
+                    var overwriteField = root.Q<UnityEditor.UIElements.ObjectField>("fx-overwrite-controller");
+                    Assert(modeField.choices.Count == 3, "Gesture apply mode dropdown is missing an option");
+                    Assert(!string.IsNullOrWhiteSpace(root.Q<Label>("fx-mode-help").text)
+                        && !root.Q<Label>("fx-mode-help").text.Contains("説明"), "Gesture apply mode help is blank or still a translation placeholder");
+                    modeField.index = (int)FxApplyMode.CreateFx;
+                    Assert(project.fxApplyMode == FxApplyMode.CreateFx, "Create FX mode was not saved from the dropdown");
+                    gesture.CreateGUI(); root = gesture.rootVisualElement;
+                    overwriteField = root.Q<UnityEditor.UIElements.ObjectField>("fx-overwrite-controller");
+                    var createHelp = root.Q<Label>("fx-mode-help").text;
+                    Assert(overwriteField.style.display.value == DisplayStyle.None && createHelp.Length > 40,
+                        "Create FX mode did not update its help or hide the optional FX field");
+                    modeField = root.Q<DropdownField>("fx-apply-mode");
+                    modeField.index = (int)FxApplyMode.OverwriteFx;
+                    Assert(project.fxApplyMode == FxApplyMode.OverwriteFx, "Overwrite FX mode was not saved from the dropdown");
+                    gesture.CreateGUI(); root = gesture.rootVisualElement;
+                    overwriteField = root.Q<UnityEditor.UIElements.ObjectField>("fx-overwrite-controller");
+                    Assert(overwriteField.style.display.value == DisplayStyle.Flex
+                        && root.Q<Label>("fx-mode-help").text.Length > 40
+                        && root.Q<Label>("fx-mode-help").text != createHelp, "Overwrite FX mode did not show its optional field and mode-specific help");
+                    overwriteField.value = temporaryController;
+                    Assert(project.overwriteFX == temporaryController, "Overwrite FX field did not save its controller");
+                }
+                finally
+                {
+                    project.fxApplyMode = previousMode;
+                    project.overwriteFX = previousOverwrite;
+                    gesture.CreateGUI(); root = gesture.rootVisualElement;
+                    Assert(root.Q<DropdownField>("fx-apply-mode").index == (int)previousMode
+                        && root.Q<UnityEditor.UIElements.ObjectField>("fx-overwrite-controller").value == previousOverwrite,
+                        "Gesture apply mode UI did not restore prior project settings");
+                    UnityEngine.Object.DestroyImmediate(temporaryController);
+                }
                 root.Q<UnityEngine.UIElements.FloatField>("gesture-blend").value = 0.25f;
                 Assert(Mathf.Approximately(project.gestureBlendSeconds, 0.25f), "gesture blend field not saved");
-                TestImportedAnimationConflictChoice(project, gesture);
+                TestIndividualGestureAssignments(project, gesture);
                 classification = ScriptableObject.CreateInstance<RimeEmoClassificationWindow>();
                 classification.Show();
                 typeof(RimeEmoClassificationWindow).GetMethod("SetProject", flags).Invoke(classification, new object[] { project });
@@ -517,36 +783,165 @@ namespace RimeEmo.Editor
             }
         }
 
-        static void TestImportedAnimationConflictChoice(RimeEmoProject project, RimeEmoGestureWindow gesture)
+        static void TestTouchGestureGuide(VisualElement root)
         {
+            string[] expectedNames = { "Neutral", "Fist", "HandOpen", "FingerPoint", "Victory", "RockNRoll", "HandGun", "ThumbsUp" };
+            Assert(RimeEmoGestures.Names.SequenceEqual(expectedNames), "the eight canonical VRChat gesture names or IDs changed");
+            var off = RimeEmoTouchGestureDiagram.Input.Off;
+            var touch = RimeEmoTouchGestureDiagram.Input.Touch;
+            var press = RimeEmoTouchGestureDiagram.Input.Press;
+            var expectedInputs = new[] { (off, off, off), (touch, press, press), (off, off, off), (touch, off, press),
+                (touch, off, off), (touch, press, off), (off, off, press), (off, press, press) };
+            Assert(RimeEmoTouchGestureDiagram.Inputs.SequenceEqual(expectedInputs), "Quest Touch input states do not match the gesture IDs");
+            var ids = Enumerable.Range(0, expectedNames.Length);
+            var diagrams = root.Q<VisualElement>("touch-poses").Query<RimeEmoTouchGestureDiagram>().ToList();
+            Assert(diagrams.Select(diagram => diagram.Gesture).SequenceEqual(ids)
+                && diagrams.All(diagram => diagram.LeftHand && !string.IsNullOrEmpty(diagram.tooltip)),
+                "Quest Touch diagrams did not bind to the guide");
+            var guide = root.Q<Foldout>("touch-guide");
+            Assert(!guide.value && guide.text.Contains("Quest 3") && guide.text.Contains("Touch Plus"), "Quest 3 guide should start collapsed");
+            guide.value = true;
+            Assert(guide.value && guide.Q<VisualElement>("touch-poses") != null, "Quest 3 guide cannot be expanded");
+            guide.value = false;
+            var matrix = root.Q<ScrollView>("gesture-matrix-scroll").Q<VisualElement>("gesture-matrix");
+            foreach (var (axis, leftHand) in new[] { ("hand-left-", true), ("hand-right-", false) })
+            {
+                foreach (int id in ids)
+                {
+                    var field = matrix.Q<UnityEditor.UIElements.ObjectField>(axis + id);
+                    var header = field?.parent?.parent;
+                    var diagram = header?.Q<RimeEmoTouchGestureDiagram>();
+                    Assert(field != null && field.enabledSelf && diagram != null && diagram.LeftHand == leftHand && diagram.Gesture == id
+                        && !string.IsNullOrEmpty(diagram.tooltip) && header.Q<Label>(className: "re-matrix-name").text == id + " " + expectedNames[id],
+                        "the combination table has an incorrect assignment header for " + axis + id);
+                }
+            }
+        }
+
+        static void TestIndividualGestureAssignments(RimeEmoProject project, RimeEmoGestureWindow gesture)
+        {
+            // The preceding UI checks recorded this same project in the current editor frame.
+            Undo.FlushUndoRecordObjects();
+            Undo.IncrementCurrentGroup();
             var originalRules = project.gestureRules.ToList();
             var originalChoices = project.gestureChoices.ToList();
+            var originalPriority = project.gesturePriority;
+            var legacy = originalRules.Single(r => r.left == 3 && r.right == 4).clip;
+            var motion = project.motions.First(m => m && m.animationClip && m.animationClip != legacy);
             var imported = new AnimationClip { name = "Imported Dynamic A" };
             AnimationUtility.SetEditorCurve(imported, RimeEmoClips.Binding(project.shapes[0]), AnimationCurve.Linear(0, 0, 1, 100));
+            string importedPath = AssetDatabase.GenerateUniqueAssetPath(
+                System.IO.Path.GetDirectoryName(AssetDatabase.GetAssetPath(project)).Replace('\\', '/') + "/Animations/Imported Dynamic A.anim");
+            AssetDatabase.CreateAsset(imported, importedPath);
             var entry = new ClipEntry { clip = imported, source = null, gesture = "未割り当て" };
             project.animations.Add(entry);
-            project.gestureRules.Add(new GestureRule { left = 1, right = -1, clip = imported });
-            project.gestureRules.Add(new GestureRule { left = -1, right = 1, clip = project.clips.First(c => c.clip).clip });
+            project.gestureRules.Add(new GestureRule { left = 3, right = -1, clip = imported });
+            project.gestureRules.Add(new GestureRule { left = -1, right = -1, motion = motion });
+            project.gesturePriority = GesturePriority.Left;
             try
             {
+                var prior = ResolveGrid();
+                int dirtyCount = EditorUtility.GetDirtyCount(project);
                 gesture.CreateGUI();
-                var dropdown = gesture.rootVisualElement.Q<VisualElement>("conflicts").Children()
-                    .SelectMany(row => row.Query<DropdownField>().ToList())
-                    .FirstOrDefault(field => field.choices.Any(choice => choice.Contains(imported.name)));
-                Assert(dropdown != null, "imported animation missing from conflict targets");
-                dropdown.value = dropdown.choices.First(choice => choice.Contains(imported.name));
-                var choice = project.gestureChoices.FirstOrDefault(c => c.left == 1 && c.right == 1);
-                Assert(choice != null && choice.clip == imported && RimeEmoAssignments.TryResolve(project, 1, 1, out var resolved) && resolved.clip == imported, "imported animation conflict choice did not persist");
+                var root = gesture.rootVisualElement;
+                var field = PairField();
+                Assert(field.value.EndsWith(legacy.name), "existing exact assignment was not selected");
+                var cell = root.Q<VisualElement>("gesture-matrix").Query<Button>(className: "re-matrix-cell").ToList()[3 * 8 + 4];
+                Assert(cell.text == legacy.name && cell.ClassListContains("re-cell--choice"), "existing exact assignment does not appear as an individual matrix cell");
+                var common = root.Q<VisualElement>("common-assignments").Q<UnityEditor.UIElements.ObjectField>();
+                Assert(common != null && common.value == motion.animationClip, "existing default for all combinations is inaccessible");
+                Assert(ResolveGrid().SequenceEqual(prior) && EditorUtility.GetDirtyCount(project) == dirtyCount, "opening the Gesture page changed the project or its resolutions");
+
+                foreach (var (label, clip, auto) in new[] { (imported.name, imported, false), ("Default Face", (AnimationClip)null, false), ("", imported, true), (motion.animationClip.name, motion.animationClip, false) })
+                {
+                    Undo.IncrementCurrentGroup();
+                    field = PairField();
+                    field.index = auto ? 0 : field.choices.FindIndex(value => value.EndsWith(label));
+                    var choice = project.gestureChoices.FirstOrDefault(c => c.left == 3 && c.right == 4);
+                    Assert(!project.gestureRules.Any(r => r.left == 3 && r.right == 4), "editing a pair left its exact rule behind");
+                    Assert(auto ? choice == null : choice != null && (clip ? choice.clip == clip : choice.useDefault), "pair edit was not recorded correctly");
+                    var expected = prior.ToArray();
+                    expected[3 * 8 + 4] = (true, clip, null);
+                    Assert(ResolveGrid().SequenceEqual(expected), "pair edit changed other cells or resolved to the wrong target");
+                    Undo.FlushUndoRecordObjects();
+                    Undo.PerformUndo();
+                    string edit = auto ? "Auto" : label;
+                    Assert(project.gestureRules.Any(r => r.left == 3 && r.right == 4 && r.clip == legacy), "undo did not restore the exact rule after " + edit);
+                    var restored = ResolveGrid();
+                    for (int i = 0; i < restored.Length; i++)
+                    {
+                        if (restored[i].Equals(prior[i])) continue;
+                        string rules = string.Join(", ", project.gestureRules.Select(r => $"({r.left}, {r.right}) clip={r.clip} motion={r.motion}"));
+                        throw new InvalidOperationException($"undo changed cell L{i / 8} R{i % 8} after {edit} from {prior[i]} to {restored[i]}. Rules = {rules}");
+                    }
+                    gesture.CreateGUI();
+                }
+
+                project.gesturePriority = GesturePriority.Manual;
                 gesture.CreateGUI();
-                var refreshed = gesture.rootVisualElement.Q<VisualElement>("conflicts").Query<DropdownField>().ToList()
-                    .First(field => field.choices.Any(value => value.Contains(imported.name)));
-                Assert(refreshed.value.Contains(imported.name), "imported animation conflict choice was lost on refresh");
+                Assert(!RimeEmoAssignments.TryResolve(project, 3, 4, out _) && PairField().value.Contains(legacy.name),
+                    "manual mode hid the existing exact assignment in an unresolved cell");
+                project.gesturePriority = GesturePriority.Left;
+                gesture.CreateGUI();
+                Undo.IncrementCurrentGroup();
+                common = gesture.rootVisualElement.Q<VisualElement>("common-assignments").Q<UnityEditor.UIElements.ObjectField>();
+                common.value = imported;
+                Assert(RimeEmoAssignments.TryResolve(project, 0, 0, out var commonRule) && commonRule.clip == imported, "common assignment could not be edited");
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                gesture.CreateGUI();
+                Undo.IncrementCurrentGroup();
+                common = gesture.rootVisualElement.Q<VisualElement>("common-assignments").Q<UnityEditor.UIElements.ObjectField>();
+                common.value = null;
+                Assert(RimeEmoAssignments.TryResolve(project, 0, 0, out commonRule) && commonRule == null, "common assignment could not be removed");
+                Undo.FlushUndoRecordObjects();
+                Undo.PerformUndo();
+                Assert(ResolveGrid().SequenceEqual(prior), "undo did not restore the common assignment");
+
+                foreach (var (name, index) in new[] { ("hand-left-3", 3 * 8), ("hand-right-4", 4) })
+                {
+                    gesture.CreateGUI();
+                    var headerField = gesture.rootVisualElement.Q<UnityEditor.UIElements.ObjectField>(name);
+                    Undo.IncrementCurrentGroup();
+                    headerField.value = motion.animationClip;
+                    var edited = ResolveGrid();
+                    Assert(edited[index].clip == motion.animationClip && edited[3 * 8 + 4].clip == legacy, "editing " + name + " did not respect its axis and the exact assignment");
+                    Undo.FlushUndoRecordObjects();
+
+                    gesture.CreateGUI();
+                    headerField = gesture.rootVisualElement.Q<UnityEditor.UIElements.ObjectField>(name);
+                    Undo.IncrementCurrentGroup();
+                    headerField.value = null;
+                    Assert(ResolveGrid()[index].motion == motion, "clearing " + name + " did not restore the common assignment");
+                    Undo.FlushUndoRecordObjects();
+                    Undo.PerformUndo();
+                    Assert(ResolveGrid().SequenceEqual(edited), "undo did not restore the cleared assignment for " + name);
+                    Undo.PerformUndo();
+                    Assert(ResolveGrid().SequenceEqual(prior), "undo did not restore the original grid for " + name);
+                }
             }
             finally
             {
+                project.gesturePriority = originalPriority;
                 project.gestureRules.Clear(); project.gestureRules.AddRange(originalRules);
                 project.gestureChoices.Clear(); project.gestureChoices.AddRange(originalChoices);
-                project.animations.Remove(entry); UnityEngine.Object.DestroyImmediate(imported);
+                project.animations.RemoveAll(e => e.clip == imported);
+                AssetDatabase.DeleteAsset(importedPath);
+            }
+
+            DropdownField PairField() => gesture.rootVisualElement.Q<VisualElement>("conflicts").Children()
+                .Single(row => row.Q<Label>()?.text == "L FingerPoint / R Victory").Q<DropdownField>();
+
+            (bool resolved, AnimationClip clip, RimeEmoMotion motion)[] ResolveGrid()
+            {
+                var grid = new (bool, AnimationClip, RimeEmoMotion)[64];
+                for (int left = 0; left < 8; left++) for (int right = 0; right < 8; right++)
+                {
+                    bool resolved = RimeEmoAssignments.TryResolve(project, left, right, out var rule);
+                    // Undo can return Unity's serialized null object wrappers. Compare usable asset references.
+                    grid[left * 8 + right] = (resolved, rule?.clip ? rule.clip : null, rule?.motion ? rule.motion : null);
+                }
+                return grid;
             }
         }
 

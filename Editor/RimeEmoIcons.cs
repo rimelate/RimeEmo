@@ -30,7 +30,7 @@ namespace RimeEmo.Editor
             { "static-mode", "face" }, { "dynamic-mode", "animation" }, { "gesture-settings", "back_hand" }, { "settings", "settings" },
             { "save", "save" }, { "show-guide", "help" }, { "rules-save", "save" }, { "gesture-save-draft", "save" },
             { "material-default", "add" }, { "material-import", "add" }, { "material-edit", "edit" }, { "material-more", "more_vert" },
-            { "new-motion", "add" }, { "save-as", "save_as" }, { "add", "add" }, { "rule-add", "add" },
+            { "new-motion", "add" }, { "save-as", "save_as" }, { "add", "add" },
             { "play", "play_arrow" }, { "stop", "stop" }, { "previous", "skip_previous" }, { "next", "skip_next" },
             { "split-queue", "content_cut" }, { "duplicate-queue", "content_copy" }, { "delete-queue", "delete" }, { "auto-split", "auto_fix_high" },
             { "fit", "fit_screen" }, { "capture-frame", "photo_camera" }, { "reload-preview", "refresh" },

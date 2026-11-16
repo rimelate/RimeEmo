@@ -70,6 +70,11 @@
           </ui:VisualElement>
 
           <ui:VisualElement name="motion-controls" class="re-card re-bottom">
+            <ui:VisualElement name="animation-editor-toolbar" class="re-row re-wrap">
+              <ui:DropdownField name="animation-editor" label="編集方式" />
+              <ui:Button name="queue-to-keyframes" text="部位別の動きをキーフレーム版へ複製" class="re-button re-button--tonal" />
+              <uie:ObjectField name="keyframe-open" label="Clipを開く" class="re-grow" />
+            </ui:VisualElement>
             <ui:VisualElement name="motion-toolbar" class="re-row">
               <ui:TextField name="motion-name" label="名前" class="re-grow" />
               <ui:Toggle name="loop" label="ループ" />

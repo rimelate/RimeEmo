@@ -1,7 +1,7 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
  <!--
    Shared by the Gesture page of the main window and the standalone Gesture window.
-   Flow: assign per hand → choose which hand wins → check the table → apply.
+   Flow: configure hand shapes and combinations → apply.
  -->
  <ui:VisualElement name="gesture-root" class="re-app">
   <ui:VisualElement name="gesture-targets" class="re-card">
@@ -16,21 +16,8 @@
      <ui:Label text="1. 手の形に割り当てる" class="re-title re-grow"/>
      <ui:Button name="rules-import" text="元FXから取り込む" tooltip="元FXで手の形だけを条件に切り替わる表情を取り込みます。素材にまだないClipは素材にも取り込みます。割り当て済みの手の形は変えません。" class="re-button re-button--text"/>
     </ui:VisualElement>
-    <ui:Label text="手の形ごとに、素材一覧やProjectから表情・動きをドロップします。空欄の手の形はDefault Faceになります。" class="re-hint"/>
-    <ui:VisualElement class="re-hands">
-     <ui:VisualElement class="re-hand-column">
-      <ui:Label text="左手" class="re-hand-title"/>
-      <ui:VisualElement name="hand-left"/>
-     </ui:VisualElement>
-     <ui:VisualElement class="re-hand-column">
-      <ui:Label text="右手" class="re-hand-title"/>
-      <ui:VisualElement name="hand-right"/>
-     </ui:VisualElement>
-    </ui:VisualElement>
-   </ui:VisualElement>
-
-   <ui:VisualElement class="re-card">
-    <ui:Label text="2. 両手で違う形をしたとき" class="re-title"/>
+    <ui:Label text="上の欄は右手、左の欄は左手です。表情・動きを各欄にドロップします。セルをクリックすると両手の組み合わせを設定できます。欄やセルにカーソルを置くと表情を確認できます。" class="re-hint"/>
+    <ui:Foldout name="touch-guide" value="false" class="re-touch-guide"/>
     <ui:VisualElement class="re-row re-wrap">
      <ui:VisualElement name="gesture-priority" class="re-segmented">
       <ui:Button name="priority-left" text="左手を優先" class="re-segment"/>
@@ -39,29 +26,21 @@
      </ui:VisualElement>
      <ui:Label name="priority-hint" class="re-hint re-grow"/>
     </ui:VisualElement>
-   </ui:VisualElement>
-
-   <ui:VisualElement class="re-card">
-    <ui:Label text="3. 結果を確認する" class="re-title"/>
-    <ui:Label text="縦が左手、横が右手です。セルをクリックすると、その組み合わせだけ個別に設定できます。" class="re-hint"/>
-    <ui:VisualElement name="gesture-matrix" class="re-matrix"/>
+    <ui:ScrollView name="gesture-matrix-scroll" mode="Horizontal" horizontal-scroller-visibility="Auto" class="re-matrix-scroll">
+     <ui:VisualElement name="gesture-matrix" class="re-matrix"/>
+    </ui:ScrollView>
     <ui:VisualElement name="gesture-legend" class="re-legend"/>
     <ui:Label text="個別に設定した組み合わせ" class="re-subtitle"/>
     <ui:VisualElement name="conflicts"/>
+    <ui:VisualElement name="common-assignments"/>
    </ui:VisualElement>
 
    <ui:VisualElement class="re-card">
-    <ui:VisualElement class="re-row">
-     <ui:Label text="両手の組み合わせ（上級）" class="re-title re-grow"/>
-     <ui:Button name="rule-add" text="＋ 組み合わせを追加" class="re-button re-button--tonal"/>
-    </ui:VisualElement>
-    <ui:Label text="左右の手が決まった組み合わせのときだけ使う表情です。片手の割り当てより優先されます。" class="re-hint"/>
-    <ui:VisualElement name="rules"/>
-   </ui:VisualElement>
-
-   <ui:VisualElement class="re-card">
-    <ui:Label text="4. アバターへ適用" class="re-title"/>
+    <ui:Label text="2. アバターへ適用" class="re-title"/>
     <ui:Label name="apply-state" class="re-hint"/>
+    <ui:DropdownField name="fx-apply-mode" label="FXの適用方法"/>
+    <uie:ObjectField name="fx-overwrite-controller" label="上書き元FX" tooltip="空欄の場合は、アバターの現在のFXを使います。"/>
+    <ui:Label name="fx-mode-help" class="re-hint"/>
     <ui:Label name="source-gesture-hint" class="re-hint"/>
     <ui:Toggle name="source-gesture-override" text="元FXの手の表情を止める（これらのShape KeyもRimeEmoが書き込む）"/>
     <ui:Toggle name="expression-menu" text="Expressions Menuに「表情」を追加する（表情固定と、素材の表情を選ぶメニュー）" tooltip="Bool 1つとInt 1つ（同期9bit）を使います。どちらも保存されず、アバターを読み込むたびに手の形の表情から始まります。"/>
@@ -76,8 +55,7 @@
     <ui:Label name="gesture-status" class="re-hint"/>
     <ui:Label name="build-errors" class="re-hint re-error"/>
     <ui:Label name="build-summary" class="re-hint"/>
-    <ui:Label text="生成するFXは、RimeEmoのGestureレイヤー1枚だけです。アバター自身のFXはそのまま残し、MA Merge Animator（追加）で一番上に重ねます。書き込むのは、RimeEmoの表情がDefault Faceから変えるShape Keyだけで、それ以外（リップシンクやまばたきなど）はアバターのFXのまま動きます。表情の間だけまばたき・口パクを止めたいときは、表情や動きの編集画面の「まばたき停止」「口パク停止」をオンにします。" class="re-hint"/>
-    <ui:Label text="適用すると、アバターの子にMA Merge Animator付きのオブジェクトを置きます。FXは毎回同じファイルを上書きするので、適用を繰り返してもファイルは増えません。編集後は「再生成して適用」か、上部の「変更を適用」で反映してください。" class="re-hint"/>
+    <ui:Label text="生成するFXはRimeEmoのGestureレイヤーを含みます。書き込むのは、RimeEmoの表情がDefault Faceから変えるShape Keyだけです。" class="re-hint"/>
    </ui:VisualElement>
   </ui:ScrollView>
  </ui:VisualElement>

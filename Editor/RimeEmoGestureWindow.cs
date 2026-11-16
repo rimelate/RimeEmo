@@ -10,21 +10,20 @@ namespace RimeEmo.Editor
     {
         [SerializeField] private RimeEmoProject project;
         [SerializeField] private GameObject avatar;
-        private AnimationClip initialClip;
-        private RimeEmoMotion initialMotion;
         private RimeEmoGesturePanel panel;
 
         public static void Open(RimeEmoProject project, GameObject avatar, AnimationClip clip = null, RimeEmoMotion motion = null)
         {
             var window = GetWindow<RimeEmoGestureWindow>("RimeEmo Gesture");
-            window.project = project; window.avatar = avatar; window.initialClip = clip; window.initialMotion = motion;
+            window.project = project; window.avatar = avatar;
             window.minSize = new Vector2(720, 540);
-            if (window.panel != null) { window.panel.InitialClip = clip; window.panel.InitialMotion = motion; window.panel.MarkDirty(); }
+            window.panel?.MarkDirty();
             window.Show();
         }
 
         private void OnEnable() { Undo.undoRedoPerformed += RefreshLater; EditorApplication.projectChanged += RefreshLater; EditorApplication.hierarchyChanged += HierarchyChanged; RimeEmoLocalization.Changed += LanguageChanged; }
-        private void OnDisable() { Undo.undoRedoPerformed -= RefreshLater; EditorApplication.projectChanged -= RefreshLater; EditorApplication.hierarchyChanged -= HierarchyChanged; RimeEmoLocalization.Changed -= LanguageChanged; }
+        private void OnDisable() { panel?.ReleaseHoverPreview(); Undo.undoRedoPerformed -= RefreshLater; EditorApplication.projectChanged -= RefreshLater; EditorApplication.hierarchyChanged -= HierarchyChanged; RimeEmoLocalization.Changed -= LanguageChanged; }
+        private void OnLostFocus() => panel?.ReleaseHoverPreview();
         private void HierarchyChanged() { if (project && !avatar) { RestoreAvatar(); RefreshLater(); } }
         private void LanguageChanged() { CreateGUI(); }
         private void RefreshLater() => panel?.MarkDirty();
@@ -63,8 +62,7 @@ namespace RimeEmo.Editor
             if (!tree) { rootVisualElement.Add(new Label(RimeEmoLocalization.T("Gesture UXMLが見つかりません。"))); return; }
             foreach (var name in new[] { "RimeEmoTheme.uss", "RimeEmoCustom.uss" })
             { var sheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(folder + name); if (sheet) rootVisualElement.styleSheets.Add(sheet); }
-            panel = new RimeEmoGesturePanel(() => project, SelectProject, () => avatar, SelectAvatar, false)
-            { InitialClip = initialClip, InitialMotion = initialMotion };
+            panel = new RimeEmoGesturePanel(() => project, SelectProject, () => avatar, SelectAvatar, false);
             panel.Build(rootVisualElement, tree, folder);
         }
     }

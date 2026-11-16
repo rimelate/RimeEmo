@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
@@ -20,11 +21,15 @@ namespace RimeEmo.Editor
         // The controller the avatar actually uses; it may be older than project.generatedFX.
         internal static RuntimeAnimatorController AppliedController(RimeEmoProject project, GameObject avatar)
         {
+            var direct = RimeEmoDirectFx.Find(project, avatar);
+            if (direct) return direct.appliedFx;
             var child = FindApplied(project, avatar);
             var type = child ? MergeType : null;
             var component = type != null ? child.GetComponent(type) : null;
             return component ? Read(component, "animator") as RuntimeAnimatorController : null;
         }
+        internal static bool HasApplied(RimeEmoProject project, GameObject avatar)
+            => RimeEmoDirectFx.Find(project, avatar) || FindApplied(project, avatar);
         // Older versions replaced the whole FX; such a component is updated to Append on the next apply.
         internal static bool AppliedAsAppend(RimeEmoProject project, GameObject avatar)
         {
@@ -37,9 +42,27 @@ namespace RimeEmo.Editor
         {
             var errors = RimeEmoBuild.Validate(project);
             if (!avatar || EditorUtility.IsPersistent(avatar)) { errors.Add(RimeEmoLocalization.T("Scene上のアバターを指定してください。")); return errors; }
-            var descriptor = avatar.GetComponents<Component>().FirstOrDefault(c => c && c.GetType().FullName == "VRC.SDK3.Avatars.Components.VRCAvatarDescriptor");
+            var descriptor = RimeEmoDirectFx.Descriptor(avatar);
             if (!descriptor) errors.Add(RimeEmoLocalization.T("VRCAvatarDescriptorが見つかりません。"));
-            if (MergeType == null) { errors.Add(RimeEmoLocalization.T("Modular AvatarのMA Merge Animatorが必要です。")); return errors; }
+            if (!project) return errors;
+            var own = FindApplied(project, avatar);
+            if (own && !IsOwned(project, own)) errors.Add(RimeEmoLocalization.T("適用先と同名のオブジェクトがあります。自動で変更できません。"));
+            if (project.fxApplyMode == FxApplyMode.ModularAvatarAppend) ValidateModularAvatar(project, errors);
+            else RimeEmoDirectFx.Validate(project, avatar, descriptor, errors);
+            if (MergeType != null) ValidateOtherMerges(project, avatar, own, errors);
+            foreach (var group in RimeEmoFace.Shapes(project).GroupBy(s => s.path))
+            {
+                var t = string.IsNullOrEmpty(group.Key) ? avatar.transform : avatar.transform.Find(group.Key);
+                var renderer = t ? t.GetComponent<SkinnedMeshRenderer>() : null;
+                if (!renderer || !renderer.sharedMesh) { errors.Add(RimeEmoLocalization.T("顔メッシュが見つかりません: ") + group.Key); continue; }
+                if (group.Any(s => renderer.sharedMesh.GetBlendShapeIndex(s.shape) < 0)) errors.Add(RimeEmoLocalization.T("保存済みShape Keyと顔メッシュが一致しません。"));
+            }
+            return errors.Distinct().ToList();
+        }
+
+        private static void ValidateModularAvatar(RimeEmoProject project, List<string> errors)
+        {
+            if (MergeType == null) { errors.Add(RimeEmoLocalization.T("Modular AvatarのMA Merge Animatorが必要です。")); return; }
             foreach (string field in new[] { "animator", "deleteAttachedAnimator", "matchAvatarWriteDefaults", "layerPriority" })
                 if (MergeType.GetField(field) == null) errors.Add(RimeEmoLocalization.T("Modular Avatarの設定が対応していません: ") + field);
             foreach (var setting in new[] { new[] { "layerType", "FX" }, new[] { "pathMode", "Absolute" }, new[] { "mergeAnimatorMode", "Append" } })
@@ -48,10 +71,11 @@ namespace RimeEmo.Editor
                 if (field == null || !field.FieldType.IsEnum || !Enum.GetNames(field.FieldType).Contains(setting[1]))
                     errors.Add(RimeEmoLocalization.T("Modular Avatarの設定が対応していません: ") + setting[0]);
             }
-            if (!project) return errors;
             errors.AddRange(RimeEmoFaceMenu.ValidateApply(project));
-            var own = FindApplied(project, avatar);
-            if (own && !IsOwned(project, own)) errors.Add(RimeEmoLocalization.T("適用先と同名のオブジェクトがあります。自動で変更できません。"));
+        }
+
+        private static void ValidateOtherMerges(RimeEmoProject project, GameObject avatar, GameObject own, List<string> errors)
+        {
             foreach (var component in avatar.GetComponentsInChildren(MergeType, true).Cast<Component>())
             {
                 if (own && component.gameObject == own) continue;
@@ -74,18 +98,11 @@ namespace RimeEmo.Editor
                     (p.name == "GestureLeft" || p.name == "GestureRight") && p.type != AnimatorControllerParameterType.Int))
                     errors.Add(RimeEmoLocalization.T("別のMA FXがGestureパラメーターをInt以外で定義しています: ") + component.name);
             }
-            foreach (var group in RimeEmoFace.Shapes(project).GroupBy(s => s.path))
-            {
-                var t = string.IsNullOrEmpty(group.Key) ? avatar.transform : avatar.transform.Find(group.Key);
-                var renderer = t ? t.GetComponent<SkinnedMeshRenderer>() : null;
-                if (!renderer || !renderer.sharedMesh) { errors.Add(RimeEmoLocalization.T("顔メッシュが見つかりません: ") + group.Key); continue; }
-                if (group.Any(s => renderer.sharedMesh.GetBlendShapeIndex(s.shape) < 0)) errors.Add(RimeEmoLocalization.T("保存済みShape Keyと顔メッシュが一致しません。"));
-            }
-            return errors.Distinct().ToList();
         }
         private static object Read(Component component, string field) => component.GetType().GetField(field)?.GetValue(component);
         private static bool IsOwned(RimeEmoProject project, GameObject child)
         {
+            if (MergeType == null) return false;
             var component = child.GetComponent(MergeType);
             var controller = component ? Read(component, "animator") as RuntimeAnimatorController : null;
             if (!controller || string.IsNullOrEmpty(project.generatedFolder)) return false;
@@ -100,10 +117,42 @@ namespace RimeEmo.Editor
         {
             var errors = Validate(project, avatar);
             if (errors.Count != 0) throw new InvalidOperationException(string.Join("\n", errors));
-            var controller = RimeEmoBuild.Build(project, avatar);
+            bool direct = project.fxApplyMode != FxApplyMode.ModularAvatarAppend;
+            if (direct && RimeEmoBuildState.Describe(project, avatar) == RimeEmoBuildState.State.UpToDate) return;
+            var controller = direct ? null : RimeEmoBuild.Build(project, avatar);
             Undo.IncrementCurrentGroup(); int group = Undo.GetCurrentGroup(); Undo.SetCurrentGroupName("RimeEmo: Apply FX");
             try
             {
+                GameObject result;
+                if (direct)
+                {
+                    string temporary = AssetDatabase.GenerateUniqueAssetPath(RimeEmoBuild.OutputFolder(project) + "/Direct FX Build.controller");
+                    try
+                    {
+                        controller = RimeEmoBuild.Build(project, avatar, temporary, out string fingerprint);
+                        RemoveModularAvatar(project, avatar);
+                        RimeEmoDirectFx.Apply(project, avatar, controller, fingerprint);
+                    }
+                    finally
+                    {
+                        if (AssetDatabase.LoadMainAssetAtPath(temporary)) AssetDatabase.DeleteAsset(temporary);
+                    }
+                    result = avatar;
+                }
+                else
+                {
+                    RimeEmoDirectFx.Restore(project, avatar);
+                    result = ApplyModularAvatar(project, avatar, controller);
+                }
+                Undo.CollapseUndoOperations(group);
+                EditorSceneManager.MarkSceneDirty(avatar.scene);
+                if (selectResult) Selection.activeGameObject = result;
+            }
+            catch { Undo.RevertAllDownToGroup(group); throw; }
+        }
+
+        private static GameObject ApplyModularAvatar(RimeEmoProject project, GameObject avatar, AnimatorController controller)
+        {
             var child = FindApplied(project, avatar);
             if (!child)
             {
@@ -132,9 +181,7 @@ namespace RimeEmo.Editor
                 serialized.ApplyModifiedProperties();
             }
             RimeEmoFaceMenu.Apply(child, project);
-            Undo.CollapseUndoOperations(group); EditorSceneManager.MarkSceneDirty(avatar.scene); if (selectResult) Selection.activeGameObject = child;
-            }
-            catch { Undo.RevertAllDownToGroup(group); throw; }
+            return child;
         }
         private static void SetEnum(SerializedObject serialized, string property, string name)
         {
@@ -144,10 +191,26 @@ namespace RimeEmo.Editor
         }
         internal static void Remove(RimeEmoProject project, GameObject avatar)
         {
+            if (!HasApplied(project, avatar)) return;
+            Undo.IncrementCurrentGroup();
+            int group = Undo.GetCurrentGroup();
+            Undo.SetCurrentGroupName("RimeEmo: Remove FX");
+            try
+            {
+                RemoveModularAvatar(project, avatar);
+                RimeEmoDirectFx.Restore(project, avatar);
+                Undo.CollapseUndoOperations(group);
+                EditorSceneManager.MarkSceneDirty(avatar.scene);
+            }
+            catch { Undo.RevertAllDownToGroup(group); throw; }
+        }
+
+        private static void RemoveModularAvatar(RimeEmoProject project, GameObject avatar)
+        {
             var child = FindApplied(project, avatar);
             if (!child) return;
             if (MergeType == null || !IsOwned(project, child)) throw new InvalidOperationException(RimeEmoLocalization.T("適用オブジェクトが変更されているため、自動解除できません。"));
-            Undo.DestroyObjectImmediate(child); EditorSceneManager.MarkSceneDirty(avatar.scene);
+            Undo.DestroyObjectImmediate(child);
         }
     }
 }
